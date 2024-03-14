@@ -1504,28 +1504,37 @@ void
 dwl_ipc_output_set_layout(struct wl_client *client, struct wl_resource *resource, uint32_t index)
 {
 	DwlIpcOutput *ipc_output;
-	Monitor *monitor;
+	Client *c = NULL;
+	Monitor *monitor = NULL;
 
 	ipc_output = wl_resource_get_user_data(resource);
 	if (!ipc_output)
 		return;
-
 	monitor = ipc_output->mon;
+
+	if (monitor != selmon)
+		c = focustop(selmon);
+
 	if (index >= LENGTH(layouts))
 		return;
-	if (index != monitor->lt[monitor->sellt] - layouts)
-		monitor->sellt ^= 1;
 
-	monitor->lt[monitor->sellt] = &layouts[index];
-	arrange(monitor);
-	printstatus();
+	if (c) {
+		monitor = selmon;
+		selmon = ipc_output->mon;
+	}
+	setlayout(&(Arg){.v = &layouts[index]});
+	if (c) {
+		selmon = monitor;
+		focusclient(c, 0);
+	}
 }
 
 void
 dwl_ipc_output_set_tags(struct wl_client *client, struct wl_resource *resource, uint32_t tagmask, uint32_t toggle_tagset)
 {
 	DwlIpcOutput *ipc_output;
-	Monitor *monitor;
+	Client *c = NULL;
+	Monitor *monitor = NULL;
 	unsigned int newtags = tagmask & TAGMASK;
 
 	ipc_output = wl_resource_get_user_data(resource);
@@ -1533,16 +1542,27 @@ dwl_ipc_output_set_tags(struct wl_client *client, struct wl_resource *resource, 
 		return;
 	monitor = ipc_output->mon;
 
-	if (!newtags || newtags == monitor->tagset[monitor->seltags])
-		return;
-	if (toggle_tagset)
-		monitor->seltags ^= 1;
+	if (monitor != selmon)
+		c = focustop(selmon);
 
-	monitor->tagset[monitor->seltags] = newtags;
-	if (selmon == monitor)
-		focusclient(focustop(monitor), 1);
-	arrange(monitor);
-	printstatus();
+	if (!newtags)
+		return;
+
+	/* view toggles seltags for us so we un-toggle it */
+	if (!toggle_tagset) {
+		monitor->seltags ^= 1;
+		monitor->tagset[monitor->seltags] = 0;
+	}
+
+	if (c) {
+		monitor = selmon;
+		selmon = ipc_output->mon;
+	}
+	view(&(Arg){.ui = newtags});
+	if (c) {
+		selmon = monitor;
+		focusclient(c, 0);
+	}
 }
 
 void
