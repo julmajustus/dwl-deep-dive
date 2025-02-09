@@ -908,4 +908,46 @@ Here are some common issues you might encounter and tips on how to resolve them:
 6. **dwl Starts from Terminal but Not from TTY or Display Manager:**
    - Additional configuration of environment variables may be required.   
    See [dwl Running Instructions](https://codeberg.org/dwl/dwl#running-dwl) for more details.
-   
+
+---
+
+## Contributing
+
+Contributions are welcome! If you find something that needs improvement or if you'd like to add new content, please feel free to contribute. Here’s how you can help:
+
+1. **Fork the Repository:**  
+   Click the "Fork" button at the top right of the repository page to create your own copy.
+
+2. **Clone Your Fork:**  
+   ```bash
+   git clone https://github.com/<your-username>/dwl-deep-dive.git
+   cd dwl-deep-dive
+
+3. **Create a New Branch:**  
+   ```bash
+   git checkout -b my-feature
+   ```
+4. **Make Your Changes:**  
+   Edit or add content as needed. Please follow the existing formatting and style guidelines.
+
+5. **Commit Your Changes:**  
+   ```bash
+   git add .
+   git commit -m "Describe your changes here"
+   ```
+6. **Push Your Branch:**  
+   ```bash
+   git push origin my-feature
+   ```
+7. **Create a Pull Request:**   
+   Open a pull request against the my-dwl branch of the original repository. Describe your changes and the reasoning behind them. We welcome feedback and suggestions!
+
+If you're not sure about something or have questions, please open an issue to discuss your ideas before making significant changes.
+
+Thank you for contributing!
+
+--- 
+
+**This concludes the guide. Happy hacking, and enjoy your deep dive into dwl!**  
+
+[my-dwl](https://github.com/julmajustus/dwl-deep-dive/tree/my-dwl)
