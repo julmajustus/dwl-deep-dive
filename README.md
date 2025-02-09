@@ -920,7 +920,7 @@ Contributions are welcome! If you find something that needs improvement or if yo
 
 2. **Clone Your Fork:**  
    ```bash
-   git clone https://github.com/<your-username>/dwl-deep-dive.git
+   git clone https://github.com/julmajustus/dwl-deep-dive.git
    cd dwl-deep-dive
 
 3. **Create a New Branch:**  
