@@ -1,0 +1,127 @@
+From 50e3dd4746b6cb719efb9f8213b94ac52a5320d9 Mon Sep 17 00:00:00 2001
+From: peesock <kcormn@gmail.com>
+Date: Mon, 24 Jun 2024 20:06:42 -0700
+Subject: [PATCH] gaps!
+
+Co-authored-by: sewn <sewn@disroot.org>
+Co-authored-by: serenevoid <ajuph9224@gmail.com>
+---
+ config.def.h |  4 ++++
+ dwl.c        | 34 ++++++++++++++++++++++++++--------
+ 2 files changed, 30 insertions(+), 8 deletions(-)
+
+diff --git a/config.def.h b/config.def.h
+index 22d2171..b388b4e 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -6,6 +6,9 @@
+ /* appearance */
+ static const int sloppyfocus               = 1;  /* focus follows mouse */
+ static const int bypass_surface_visibility = 0;  /* 1 means idle inhibitors will disable idle tracking even if it's surface isn't visible  */
++static const int smartgaps                 = 0;  /* 1 means no outer gap when there is only one window */
++static int gaps                            = 1;  /* 1 means gaps between windows are added */
++static const unsigned int gappx            = 10; /* gap pixel between windows */
+ static const unsigned int borderpx         = 1;  /* border pixel of windows */
+ static const float rootcolor[]             = COLOR(0x222222ff);
+ static const float bordercolor[]           = COLOR(0x444444ff);
+@@ -135,6 +138,7 @@ static const Key keys[] = {
+ 	{ MODKEY,                    XKB_KEY_l,          setmfact,       {.f = +0.05f} },
+ 	{ MODKEY,                    XKB_KEY_Return,     zoom,           {0} },
+ 	{ MODKEY,                    XKB_KEY_Tab,        view,           {0} },
++	{ MODKEY,                    XKB_KEY_g,          togglegaps,     {0} },
+ 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_C,          killclient,     {0} },
+ 	{ MODKEY,                    XKB_KEY_t,          setlayout,      {.v = &layouts[0]} },
+ 	{ MODKEY,                    XKB_KEY_f,          setlayout,      {.v = &layouts[1]} },
+diff --git a/dwl.c b/dwl.c
+index dc0437e..dc851df 100644
+--- a/dwl.c
++++ b/dwl.c
+@@ -199,6 +199,7 @@ struct Monitor {
+ 	struct wlr_box w; /* window area, layout-relative */
+ 	struct wl_list layers[4]; /* LayerSurface.link */
+ 	const Layout *lt[2];
++	int gaps;
+ 	unsigned int seltags;
+ 	unsigned int sellt;
+ 	uint32_t tagset[2];
+@@ -336,6 +337,7 @@ static void tagmon(const Arg *arg);
+ static void tile(Monitor *m);
+ static void togglefloating(const Arg *arg);
+ static void togglefullscreen(const Arg *arg);
++static void togglegaps(const Arg *arg);
+ static void toggletag(const Arg *arg);
+ static void toggleview(const Arg *arg);
+ static void unlocksession(struct wl_listener *listener, void *data);
+@@ -949,6 +951,8 @@ createmon(struct wl_listener *listener, void *data)
+ 
+ 	wlr_output_state_init(&state);
+ 	/* Initialize monitor state using configured rules */
++	m->gaps = gaps;
++
+ 	m->tagset[0] = m->tagset[1] = 1;
+ 	for (r = monrules; r < END(monrules); r++) {
+ 		if (!r->name || strstr(wlr_output->name, r->name)) {
+@@ -2638,7 +2642,7 @@ tagmon(const Arg *arg)
+ void
+ tile(Monitor *m)
+ {
+-	unsigned int mw, my, ty;
++	unsigned int h, r, e = m->gaps, mw, my, ty;
+ 	int i, n = 0;
+ 	Client *c;
+ 
+@@ -2647,23 +2651,30 @@ tile(Monitor *m)
+ 			n++;
+ 	if (n == 0)
+ 		return;
++	if (smartgaps == n)
++		e = 0;
+ 
+ 	if (n > m->nmaster)
+-		mw = m->nmaster ? (int)roundf(m->w.width * m->mfact) : 0;
++		mw = m->nmaster ? (int)roundf((m->w.width + gappx*e) * m->mfact) : 0;
+ 	else
+ 		mw = m->w.width;
+-	i = my = ty = 0;
++	i = 0;
++	my = ty = gappx*e;
+ 	wl_list_for_each(c, &clients, link) {
+ 		if (!VISIBLEON(c, m) || c->isfloating || c->isfullscreen)
+ 			continue;
+ 		if (i < m->nmaster) {
+-			resize(c, (struct wlr_box){.x = m->w.x, .y = m->w.y + my, .width = mw,
+-				.height = (m->w.height - my) / (MIN(n, m->nmaster) - i)}, 0);
+-			my += c->geom.height;
++			r = MIN(n, m->nmaster) - i;
++			h = (m->w.height - my - gappx*e - gappx*e * (r - 1)) / r;
++			resize(c, (struct wlr_box){.x = m->w.x + gappx*e, .y = m->w.y + my,
++				.width = mw - 2*gappx*e, .height = h}, 0);
++			my += c->geom.height + gappx*e;
+ 		} else {
++			r = n - i;
++			h = (m->w.height - ty - gappx*e - gappx*e * (r - 1)) / r;
+ 			resize(c, (struct wlr_box){.x = m->w.x + mw, .y = m->w.y + ty,
+-				.width = m->w.width - mw, .height = (m->w.height - ty) / (n - i)}, 0);
+-			ty += c->geom.height;
++				.width = m->w.width - mw - gappx*e, .height = h}, 0);
++			ty += c->geom.height + gappx*e;
+ 		}
+ 		i++;
+ 	}
+@@ -2686,6 +2697,13 @@ togglefullscreen(const Arg *arg)
+ 		setfullscreen(sel, !sel->isfullscreen);
+ }
+ 
++void
++togglegaps(const Arg *arg)
++{
++	selmon->gaps = !selmon->gaps;
++	arrange(selmon);
++}
++
+ void
+ toggletag(const Arg *arg)
+ {
+-- 
+2.45.2
+

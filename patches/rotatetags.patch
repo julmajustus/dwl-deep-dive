@@ -1,0 +1,91 @@
+From 308c668010bb7526ea40ad12dbaa1af62f9d7421 Mon Sep 17 00:00:00 2001
+From: korei999 <ju7t1xe@gmail.com>
+Date: Tue, 23 Jan 2024 12:01:48 +0200
+Subject: [PATCH] add rotatetags patch
+
+---
+ config.def.h | 13 ++++++++++++-
+ dwl.c        | 29 +++++++++++++++++++++++++++++
+ 2 files changed, 41 insertions(+), 1 deletion(-)
+
+diff --git a/config.def.h b/config.def.h
+index 9009517..a80207a 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -14,6 +14,13 @@ static const float urgentcolor[]           = COLOR(0xff0000ff);
+ /* To conform the xdg-protocol, set the alpha to zero to restore the old behavior */
+ static const float fullscreen_bg[]         = {0.1f, 0.1f, 0.1f, 1.0f}; /* You can also use glsl colors */
+ 
++enum {
++    VIEW_L = -1,
++    VIEW_R = 1,
++    SHIFT_L = -2,
++    SHIFT_R = 2,
++} RotateTags;
++
+ /* tagging - TAGCOUNT must be no greater than 31 */
+ #define TAGCOUNT (9)
+ 
+@@ -125,7 +132,11 @@ static const Key keys[] = {
+ 	{ MODKEY,                    XKB_KEY_j,          focusstack,     {.i = +1} },
+ 	{ MODKEY,                    XKB_KEY_k,          focusstack,     {.i = -1} },
+ 	{ MODKEY,                    XKB_KEY_i,          incnmaster,     {.i = +1} },
+-	{ MODKEY,                    XKB_KEY_d,          incnmaster,     {.i = -1} },
++	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_i,          incnmaster,     {.i = -1} },
++	{ MODKEY,                    XKB_KEY_a,          rotatetags,     {.i = VIEW_L} },
++	{ MODKEY,                    XKB_KEY_d,          rotatetags,     {.i = VIEW_R} },
++	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_a,          rotatetags,     {.i = SHIFT_L} },
++	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_d,          rotatetags,     {.i = SHIFT_R} },
+ 	{ MODKEY,                    XKB_KEY_h,          setmfact,       {.f = -0.05f} },
+ 	{ MODKEY,                    XKB_KEY_l,          setmfact,       {.f = +0.05f} },
+ 	{ MODKEY,                    XKB_KEY_Return,     zoom,           {0} },
+diff --git a/dwl.c b/dwl.c
+index bf02a6d..e737e34 100644
+--- a/dwl.c
++++ b/dwl.c
+@@ -332,6 +332,7 @@ static Monitor *xytomon(double x, double y);
+ static void xytonode(double x, double y, struct wlr_surface **psurface,
+ 		Client **pc, LayerSurface **pl, double *nx, double *ny);
+ static void zoom(const Arg *arg);
++static void rotatetags(const Arg *arg);
+ 
+ /* variables */
+ static const char broken[] = "broken";
+@@ -2798,6 +2799,34 @@ zoom(const Arg *arg)
+ 	arrange(selmon);
+ }
+ 
++static void
++rotatetags(const Arg *arg)
++{
++	Arg newarg;
++	int i = arg->i;
++	int nextseltags = 0, curseltags = selmon->tagset[selmon->seltags];
++	bool shift = false;
++
++	switch(abs(i)) {
++		default: break;
++		case SHIFT_R:
++			shift = true;
++			break;
++	};
++
++	if (i > 0)
++		nextseltags = (curseltags << 1) | (curseltags >> (TAGCOUNT - 1));
++	else
++		nextseltags = (curseltags >> 1) | (curseltags << (TAGCOUNT - 1));
++
++	newarg.i = nextseltags;
++
++	if (shift)
++		tag(&newarg);
++	else
++		view(&newarg);
++}
++
+ #ifdef XWAYLAND
+ void
+ activatex11(struct wl_listener *listener, void *data)
+-- 
+2.43.0
+

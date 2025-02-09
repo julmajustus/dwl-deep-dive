@@ -1,0 +1,97 @@
+From c7d77ff4dec1da5a68b4da8aa42d4ed78dc41a00 Mon Sep 17 00:00:00 2001
+From: choc <notchoc@proton.me>
+Date: Thu, 14 Mar 2024 11:18:37 +0800
+Subject: [PATCH] fix ipc to work with pertag
+
+---
+ dwl.c | 50 +++++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 35 insertions(+), 15 deletions(-)
+
+diff --git a/dwl.c b/dwl.c
+index a1a7809..d86e6e2 100644
+--- a/dwl.c
++++ b/dwl.c
+@@ -1526,28 +1526,37 @@ void
+ dwl_ipc_output_set_layout(struct wl_client *client, struct wl_resource *resource, uint32_t index)
+ {
+ 	DwlIpcOutput *ipc_output;
+-	Monitor *monitor;
++	Client *c = NULL;
++	Monitor *monitor = NULL;
+ 
+ 	ipc_output = wl_resource_get_user_data(resource);
+ 	if (!ipc_output)
+ 		return;
+-
+ 	monitor = ipc_output->mon;
++
++	if (monitor != selmon)
++		c = focustop(selmon);
++
+ 	if (index >= LENGTH(layouts))
+ 		return;
+-	if (index != monitor->lt[monitor->sellt] - layouts)
+-		monitor->sellt ^= 1;
+ 
+-	monitor->lt[monitor->sellt] = &layouts[index];
+-	arrange(monitor);
+-	printstatus();
++	if (c) {
++		monitor = selmon;
++		selmon = ipc_output->mon;
++	}
++	setlayout(&(Arg){.v = &layouts[index]});
++	if (c) {
++		selmon = monitor;
++		focusclient(c, 0);
++	}
+ }
+ 
+ void
+ dwl_ipc_output_set_tags(struct wl_client *client, struct wl_resource *resource, uint32_t tagmask, uint32_t toggle_tagset)
+ {
+ 	DwlIpcOutput *ipc_output;
+-	Monitor *monitor;
++	Client *c = NULL;
++	Monitor *monitor = NULL;
+ 	unsigned int newtags = tagmask & TAGMASK;
+ 
+ 	ipc_output = wl_resource_get_user_data(resource);
+@@ -1555,16 +1564,27 @@ dwl_ipc_output_set_tags(struct wl_client *client, struct wl_resource *resource,
+ 		return;
+ 	monitor = ipc_output->mon;
+ 
+-	if (!newtags || newtags == monitor->tagset[monitor->seltags])
++	if (monitor != selmon)
++		c = focustop(selmon);
++
++	if (!newtags)
+ 		return;
+-	if (toggle_tagset)
++
++	/* view toggles seltags for us so we un-toggle it */
++	if (!toggle_tagset) {
+ 		monitor->seltags ^= 1;
++		monitor->tagset[monitor->seltags] = 0;
++	}
+ 
+-	monitor->tagset[monitor->seltags] = newtags;
+-	if (selmon == monitor)
+-		focusclient(focustop(monitor), 1);
+-	arrange(monitor);
+-	printstatus();
++	if (c) {
++		monitor = selmon;
++		selmon = ipc_output->mon;
++	}
++	view(&(Arg){.ui = newtags});
++	if (c) {
++		selmon = monitor;
++		focusclient(c, 0);
++	}
+ }
+ 
+ void
+-- 
+2.43.0
+
