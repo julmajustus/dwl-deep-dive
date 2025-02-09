@@ -1,6 +1,7 @@
 /*
  * See LICENSE file for copyright and license details.
  */
+#include <limits.h>
 #include <getopt.h>
 #include <libinput.h>
 #include <linux/input-event-codes.h>
@@ -103,6 +104,7 @@ typedef struct {
 	const Arg arg;
 } Button;
 
+typedef struct TreeLayout TreeLayout;
 typedef struct Monitor Monitor;
 typedef struct {
 	/* Must keep these three elements in this order */
@@ -139,8 +141,11 @@ typedef struct {
 #endif
 	unsigned int bw;
 	uint32_t tags;
-	int isfloating, isurgent, isfullscreen;
+	int isfloating, isurgent, isfullscreen, was_tiled;
 	uint32_t resize; /* configure serial of a pending resize */
+	struct wlr_box old_geom;
+	struct wl_list link_tiled;
+	struct wl_list link_temp;
 } Client;
 
 typedef struct {
@@ -208,6 +213,7 @@ struct Monitor {
 	int nmaster;
 	char ltsymbol[16];
 	int asleep;
+	TreeLayout *tree_layout;
 };
 
 typedef struct {
@@ -250,6 +256,7 @@ static void arrangelayer(Monitor *m, struct wl_list *list,
 		struct wlr_box *usable_area, int exclusive);
 static void arrangelayers(Monitor *m);
 static void axisnotify(struct wl_listener *listener, void *data);
+static void btrtile(Monitor *m);
 static void buttonpress(struct wl_listener *listener, void *data);
 static void chvt(const Arg *arg);
 static void checkidleinhibitor(struct wlr_surface *exclude);
@@ -333,6 +340,9 @@ static void setmon(Client *c, Monitor *m, uint32_t newtags);
 static void setpsel(struct wl_listener *listener, void *data);
 static void setsel(struct wl_listener *listener, void *data);
 static void setup(void);
+static void setratio_h(const Arg *arg);
+static void setratio_v(const Arg *arg);
+static void swapclients(const Arg *arg);
 static void spawn(const Arg *arg);
 static void startdrag(struct wl_listener *listener, void *data);
 static void tag(const Arg *arg);
@@ -431,6 +441,7 @@ static xcb_atom_t netatom[NetLast];
 
 /* attempt to encapsulate suck into one file */
 #include "client.h"
+#include "btrtile.c"
 
 /* function implementations */
 void
@@ -600,10 +611,15 @@ buttonpress(struct wl_listener *listener, void *data)
 {
 	struct wlr_pointer_button_event *event = data;
 	struct wlr_keyboard *keyboard;
-	uint32_t mods;
-	Client *c;
+	struct wl_list *tiled_clients;
+	LayoutNode **root, *old_root;
+	uint32_t mods, curtag, active_tags = selmon->tagset[selmon->seltags];
+	Client *c, *target = NULL;
 	const Button *b;
 
+	curtag = get_current_tag(selmon);
+	root = &selmon->tree_layout->root[curtag];
+	tiled_clients = &selmon->tree_layout->tiled_clients[curtag];
 	wlr_idle_notifier_v1_notify_activity(idle_notifier, seat);
 
 	switch (event->state) {
@@ -632,15 +648,47 @@ buttonpress(struct wl_listener *listener, void *data)
 		/* If you released any buttons, we exit interactive move/resize mode. */
 		/* TODO should reset to the pointer focus's current setcursor */
 		if (!locked && cursor_mode != CurNormal && cursor_mode != CurPressed) {
+			c = grabc;
+			if (c && c->was_tiled && !strcmp(selmon->ltsymbol, "|w|")) {
+				/* Check if more than one tag is active, if so we escape */
+				if (active_tags && (active_tags & (active_tags - 1)))
+					break;
+				if (cursor_mode == CurMove && c->isfloating) {
+					target = xytoclient(cursor->x, cursor->y, curtag);
+
+					if (target && !target->isfloating && !target->isfullscreen) {
+						insert_client(selmon, target, c, root, tiled_clients);
+					} else {
+						if (!root) {
+							*root = create_client_node(c);
+							add_client_to_tiled_list(c, tiled_clients);
+						} else {
+							old_root = *root;
+							*root = create_split_node(1, old_root, create_client_node(c));
+							add_client_to_tiled_list(c, tiled_clients);
+						}
+					}
+
+					setfloating(c, 0);
+					arrange(selmon);
+
+				} else if (cursor_mode == CurResize && !c->isfloating) {
+					resizing_from_mouse = 0;
+				}
+			} else {
+				if (cursor_mode == CurResize && resizing_from_mouse)
+					resizing_from_mouse = 0;
+			}
+			/* Default behaviour */
 			wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
 			cursor_mode = CurNormal;
 			/* Drop the window off on its new monitor */
 			selmon = xytomon(cursor->x, cursor->y);
 			setmon(grabc, selmon, 0);
+			grabc = NULL;
 			return;
-		} else {
-			cursor_mode = CurNormal;
 		}
+		cursor_mode = CurNormal;
 		break;
 	}
 	/* If the event wasn't handled by the compositor, notify the client with
@@ -720,6 +768,9 @@ cleanupmon(struct wl_listener *listener, void *data)
 	wlr_output_layout_remove(output_layout, m->wlr_output);
 	wlr_scene_output_destroy(m->scene_output);
 
+	destroy_tree_layout(m);
+	free(m->tree_layout);
+	m->tree_layout = NULL;
 	closemon(m);
 	wlr_scene_node_destroy(&m->fullscreen_bg->node);
 	free(m);
@@ -1024,6 +1075,7 @@ createmon(struct wl_listener *listener, void *data)
 
 	wl_list_insert(&mons, &m->link);
 	printstatus();
+	init_tree_layout(m);
 
 	/* The xdg-protocol specifies:
 	 *
@@ -1263,6 +1315,15 @@ destroynotify(struct wl_listener *listener, void *data)
 	wl_list_remove(&c->destroy.link);
 	wl_list_remove(&c->set_title.link);
 	wl_list_remove(&c->fullscreen.link);
+	/* We check if the destroyed client was part of any tiled_list, to catch
+	 * client removals even if they would not be currently managed by btrtile */
+	if (selmon && selmon->tree_layout) {
+		for (int i = 0; i < TAGCOUNT; i++) {
+			remove_client(selmon, c,
+		 &selmon->tree_layout->root[i],
+		 &selmon->tree_layout->tiled_clients[i]);
+		}
+	}
 #ifdef XWAYLAND
 	if (c->type != XDGShell) {
 		wl_list_remove(&c->activate.link);
@@ -1809,7 +1870,8 @@ void
 motionnotify(uint32_t time, struct wlr_input_device *device, double dx, double dy,
 		double dx_unaccel, double dy_unaccel)
 {
-	double sx = 0, sy = 0, sx_confined, sy_confined;
+	int tiled = 0;
+	double sx = 0, sy = 0, sx_confined, sy_confined, dx_total, dy_total;
 	Client *c = NULL, *w = NULL;
 	LayerSurface *l = NULL;
 	struct wlr_surface *surface = NULL;
@@ -1863,18 +1925,56 @@ motionnotify(uint32_t time, struct wlr_input_device *device, double dx, double d
 	/* Update drag icon's position */
 	wlr_scene_node_set_position(&drag_icon->node, (int)round(cursor->x), (int)round(cursor->y));
 
-	/* If we are currently grabbing the mouse, handle and return */
+	/* Skip if internal call or already resizing */
+	if (time == 0 && resizing_from_mouse)
+		goto focus;
+
+	tiled = grabc && !grabc->isfloating && !grabc->isfullscreen;
 	if (cursor_mode == CurMove) {
 		/* Move the grabbed client to the new position. */
-		resize(grabc, (struct wlr_box){.x = (int)round(cursor->x) - grabcx, .y = (int)round(cursor->y) - grabcy,
-			.width = grabc->geom.width, .height = grabc->geom.height}, 1);
-		return;
+		if (grabc && grabc->isfloating) {
+			resize(grabc, (struct wlr_box){
+				.x = (int)round(cursor->x) - grabcx,
+				.y = (int)round(cursor->y) - grabcy,
+				.width = grabc->geom.width,
+				.height = grabc->geom.height
+			}, 1);
+			return;
+		}
 	} else if (cursor_mode == CurResize) {
-		resize(grabc, (struct wlr_box){.x = grabc->geom.x, .y = grabc->geom.y,
-			.width = (int)round(cursor->x) - grabc->geom.x, .height = (int)round(cursor->y) - grabc->geom.y}, 1);
-		return;
+		if (tiled && resizing_from_mouse) {
+			dx_total = cursor->x - resize_last_update_x;
+			dy_total = cursor->y - resize_last_update_y;
+
+			if (time - last_resize_time >= resize_interval_ms) {
+				Arg a = {0};
+				if (fabs(dx_total) > fabs(dy_total)) {
+					a.f = (float)(dx_total * resize_factor);
+					setratio_h(&a);
+				} else {
+					a.f = (float)(dy_total * resize_factor);
+					setratio_v(&a);
+				}
+				arrange(selmon);
+
+				last_resize_time = time;
+				resize_last_update_x = cursor->x;
+				resize_last_update_y = cursor->y;
+			}
+
+		} else if (grabc && grabc->isfloating) {
+			/* Floating resize as original */
+			resize(grabc, (struct wlr_box){
+				.x = grabc->geom.x,
+				.y = grabc->geom.y,
+				.width = (int)round(cursor->x) - grabc->geom.x,
+				.height = (int)round(cursor->y) - grabc->geom.y
+			}, 1);
+			return;
+		}
 	}
 
+focus:
 	/* If there's no client surface under the cursor, set the cursor image to a
 	 * default. This is what makes the cursor image appear when you move it
 	 * off of a client or over its border. */
@@ -1908,22 +2008,41 @@ moveresize(const Arg *arg)
 	if (!grabc || client_is_unmanaged(grabc) || grabc->isfullscreen)
 		return;
 
-	/* Float the window and tell motionnotify to grab it */
-	setfloating(grabc, 1);
-	switch (cursor_mode = arg->ui) {
-	case CurMove:
-		grabcx = (int)round(cursor->x) - grabc->geom.x;
-		grabcy = (int)round(cursor->y) - grabc->geom.y;
-		wlr_cursor_set_xcursor(cursor, cursor_mgr, "fleur");
-		break;
-	case CurResize:
-		/* Doesn't work for X11 output - the next absolute motion event
-		 * returns the cursor to where it started */
-		wlr_cursor_warp_closest(cursor, NULL,
+	cursor_mode = arg->ui;
+	grabc->was_tiled = (!grabc->isfloating && !grabc->isfullscreen);
+
+	if (grabc->was_tiled) {
+		switch (cursor_mode) {
+			case CurMove:
+				setfloating(grabc, 1);
+				grabcx = (int)round(cursor->x) - grabc->geom.x;
+				grabcy = (int)round(cursor->y) - grabc->geom.y;
+				wlr_cursor_set_xcursor(cursor, cursor_mgr, "fleur");
+				break;
+			case CurResize:
+				wlr_cursor_set_xcursor(cursor, cursor_mgr, "se-resize");
+				resize_last_update_x = cursor->x;
+				resize_last_update_y = cursor->y;
+				resizing_from_mouse = 1;
+				break;
+		}
+	} else {
+		/* Default floating logic */
+		/* Float the window and tell motionnotify to grab it */
+		setfloating(grabc, 1);
+		switch (cursor_mode) {
+			case CurMove:
+				grabcx = (int)round(cursor->x) - grabc->geom.x;
+				grabcy = (int)round(cursor->y) - grabc->geom.y;
+				wlr_cursor_set_xcursor(cursor, cursor_mgr, "fleur");
+				break;
+			case CurResize:
+				wlr_cursor_warp_closest(cursor, NULL,
 				grabc->geom.x + grabc->geom.width,
 				grabc->geom.y + grabc->geom.height);
-		wlr_cursor_set_xcursor(cursor, cursor_mgr, "se-resize");
-		break;
+				wlr_cursor_set_xcursor(cursor, cursor_mgr, "se-resize");
+				break;
+		}
 	}
 }
 
