@@ -298,6 +298,7 @@ static Monitor *dirtomon(enum wlr_direction dir);
 static void focusclient(Client *c, int lift);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
+static void focusdir(const Arg *arg);
 static Client *focustop(Monitor *m);
 static void fullscreennotify(struct wl_listener *listener, void *data);
 static void gpureset(struct wl_listener *listener, void *data);
@@ -1536,6 +1537,49 @@ focusstack(const Arg *arg)
 	/* If only one client is visible on selmon, then c == sel */
 	focusclient(c, 1);
 }
+
+void focusdir(const Arg *arg)
+{
+	/* Focus the left, right, up, down client relative to the current focused client on selmon */
+  Client *c, *sel = focustop(selmon);
+	if (!sel || sel->isfullscreen)
+		return;
+
+  int dist=INT_MAX;
+  Client *newsel = NULL;
+  int newdist=INT_MAX;
+  wl_list_for_each(c, &clients, link) {
+    if (!VISIBLEON(c, selmon))
+      continue; /* skip non visible windows */
+
+    if (arg->ui == 0 && sel->geom.x <= c->geom.x) {
+      /* Client isn't on our left */
+      continue;
+    }
+    if (arg->ui == 1 && sel->geom.x >= c->geom.x) {
+      /* Client isn't on our right */
+      continue;
+    }
+    if (arg->ui == 2 && sel->geom.y <= c->geom.y) {
+      /* Client isn't above us */
+      continue;
+    }
+    if (arg->ui == 3 && sel->geom.y >= c->geom.y) {
+      /* Client isn't below us */
+      continue;
+    }
+
+    dist=abs(sel->geom.x-c->geom.x)+abs(sel->geom.y-c->geom.y);
+    if (dist < newdist){
+      newdist = dist;
+      newsel=c;
+    }
+  }
+  if (newsel != NULL){
+    focusclient(newsel, 1);
+  }
+}
+
 
 /* We probably should change the name of this, it sounds like
  * will focus the topmost client of this mon, when actually will
