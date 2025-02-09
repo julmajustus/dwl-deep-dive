@@ -74,16 +74,10 @@ static const MonitorRule monrules[] = {
 };
 
 /* keyboard */
-static const struct xkb_rule_names xkb_rules[] = {
-	{
+static const struct xkb_rule_names xkb_rules = {
 		/* can specify fields: rules, model, layout, variant, options */
 		.layout = "us",
 		.options = NULL,
-	},
-	{
-		.layout = "fi",
-		.options = NULL,
-	},
 };
 
 static const int repeat_rate				= 25;
@@ -216,9 +210,6 @@ static const Key keys[] = {
 	{ MODKEY|WLR_MODIFIER_ALT,					XKB_KEY_a,				spawn,				{.v = telegram} },
 	{ MODKEY|WLR_MODIFIER_ALT,					XKB_KEY_o,				spawn,				{.v = obs} },
 	{ MODKEY,									XKB_KEY_p,				spawn,				{.v = colorpicker} },
-	{ 0,										XKB_KEY_Print,			capturecurscreen,	{0} },
-	{ WLR_MODIFIER_CTRL,						XKB_KEY_Print,			capturecurwin,		{0} },
-	{ WLR_MODIFIER_ALT,							XKB_KEY_Sys_Req,		capturegeom,		{0} },
 	{ WLR_MODIFIER_CTRL|WLR_MODIFIER_ALT,		XKB_KEY_x,				spawn,				{.v = lockscreen} },
 	{ WLR_MODIFIER_CTRL|WLR_MODIFIER_ALT,		XKB_KEY_p,				spawn,				{.v = suspend} },
 	{ WLR_MODIFIER_CTRL|WLR_MODIFIER_ALT,		XKB_KEY_i,				spawn,				{.v = hibernate} },
