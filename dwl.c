@@ -370,6 +370,7 @@ static Monitor *xytomon(double x, double y);
 static void xytonode(double x, double y, struct wlr_surface **psurface,
 		Client **pc, LayerSurface **pl, double *nx, double *ny);
 static void zoom(const Arg *arg);
+static void rotatetags(const Arg *arg);
 
 /* variables */
 static const char broken[] = "broken";
@@ -3298,6 +3299,34 @@ zoom(const Arg *arg)
 
 	focusclient(sel, 1);
 	arrange(selmon);
+}
+
+static void
+rotatetags(const Arg *arg)
+{
+	Arg newarg;
+	int i = arg->i;
+	int nextseltags = 0, curseltags = selmon->tagset[selmon->seltags];
+	bool shift = false;
+
+	switch(abs(i)) {
+		default: break;
+		case SHIFT_R:
+			shift = true;
+			break;
+	};
+
+	if (i > 0)
+		nextseltags = (curseltags << 1) | (curseltags >> (TAGCOUNT - 1));
+	else
+		nextseltags = (curseltags >> 1) | (curseltags << (TAGCOUNT - 1));
+
+	newarg.i = nextseltags;
+
+	if (shift)
+		tag(&newarg);
+	else
+		view(&newarg);
 }
 
 #ifdef XWAYLAND
