@@ -651,7 +651,7 @@ buttonpress(struct wl_listener *listener, void *data)
 	struct wlr_pointer_button_event *event = data;
 	struct wlr_keyboard *keyboard;
 	struct wl_list *tiled_clients;
-	LayoutNode **root, *old_root;
+	LayoutNode **root;
 	uint32_t mods, curtag, active_tags = selmon->tagset[selmon->seltags];
 	Client *c, *target = NULL;
 	const Button *b;
@@ -662,78 +662,72 @@ buttonpress(struct wl_listener *listener, void *data)
 	wlr_idle_notifier_v1_notify_activity(idle_notifier, seat);
 
 	switch (event->state) {
-	case WL_POINTER_BUTTON_STATE_PRESSED:
-		cursor_mode = CurPressed;
-		selmon = xytomon(cursor->x, cursor->y);
-		if (locked)
-			break;
+		case WL_POINTER_BUTTON_STATE_PRESSED:
+			cursor_mode = CurPressed;
+			selmon = xytomon(cursor->x, cursor->y);
+			if (locked)
+				break;
 
-		/* Change focus if the button was _pressed_ over a client */
-		xytonode(cursor->x, cursor->y, NULL, &c, NULL, NULL, NULL);
-		if (c && (!client_is_unmanaged(c) || client_wants_focus(c)))
-			focusclient(c, 1);
+			/* Change focus if the button was _pressed_ over a client */
+			xytonode(cursor->x, cursor->y, NULL, &c, NULL, NULL, NULL);
+			if (c && (!client_is_unmanaged(c) || client_wants_focus(c)))
+				focusclient(c, 1);
 
-		keyboard = wlr_seat_get_keyboard(seat);
-		mods = keyboard ? wlr_keyboard_get_modifiers(keyboard) : 0;
-		for (b = buttons; b < END(buttons); b++) {
-			if (CLEANMASK(mods) == CLEANMASK(b->mod) &&
+			keyboard = wlr_seat_get_keyboard(seat);
+			mods = keyboard ? wlr_keyboard_get_modifiers(keyboard) : 0;
+			for (b = buttons; b < END(buttons); b++) {
+				if (CLEANMASK(mods) == CLEANMASK(b->mod) &&
 					event->button == b->button && b->func) {
-				b->func(&b->arg);
-				return;
+					b->func(&b->arg);
+					return;
+				}
 			}
-		}
-		break;
-	case WL_POINTER_BUTTON_STATE_RELEASED:
-		/* If you released any buttons, we exit interactive move/resize mode. */
-		/* TODO should reset to the pointer focus's current setcursor */
-		if (!locked && cursor_mode != CurNormal && cursor_mode != CurPressed) {
-			c = grabc;
-			if (c && c->was_tiled && !strcmp(selmon->ltsymbol, "|w|")) {
-				/* Check if more than one tag is active, if so we escape */
-				if (active_tags && (active_tags & (active_tags - 1)))
-					break;
-				if (cursor_mode == CurMove && c->isfloating) {
-					target = xytoclient(cursor->x, cursor->y, curtag);
+			break;
+		case WL_POINTER_BUTTON_STATE_RELEASED:
+			/* If you released any buttons, we exit interactive move/resize mode. */
+			/* TODO should reset to the pointer focus's current setcursor */
+			if (!locked && cursor_mode != CurNormal && cursor_mode != CurPressed) {
+				c = grabc;
+				if (c && c->was_tiled && !strcmp(selmon->ltsymbol, "|w|")) {
+					/* Check if more than one tag is active, if so we escape */
+					if (active_tags && (active_tags & (active_tags - 1)))
+						break;
+					if (cursor_mode == CurMove && c->isfloating) {
+						target = xytoclient(cursor->x, cursor->y, curtag);
 
-					if (target && !target->isfloating && !target->isfullscreen) {
-						insert_client(selmon, target, c, root, tiled_clients);
-					} else {
-						if (!root) {
+						if (target && !target->isfloating && !target->isfullscreen) {
+							insert_client(selmon, target, c, root, tiled_clients);
+						} else {
 							*root = create_client_node(c);
 							add_client_to_tiled_list(c, tiled_clients);
-						} else {
-							old_root = *root;
-							*root = create_split_node(1, old_root, create_client_node(c));
-							add_client_to_tiled_list(c, tiled_clients);
 						}
+
+						setfloating(c, 0);
+						arrange(selmon);
+
+					} else if (cursor_mode == CurResize && !c->isfloating) {
+						resizing_from_mouse = 0;
 					}
-
-					setfloating(c, 0);
-					arrange(selmon);
-
-				} else if (cursor_mode == CurResize && !c->isfloating) {
-					resizing_from_mouse = 0;
+				} else {
+					if (cursor_mode == CurResize && resizing_from_mouse)
+						resizing_from_mouse = 0;
 				}
-			} else {
-				if (cursor_mode == CurResize && resizing_from_mouse)
-					resizing_from_mouse = 0;
+				/* Default behaviour */
+				wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
+				cursor_mode = CurNormal;
+				/* Drop the window off on its new monitor */
+				selmon = xytomon(cursor->x, cursor->y);
+				setmon(grabc, selmon, 0);
+				grabc = NULL;
+				return;
 			}
-			/* Default behaviour */
-			wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
 			cursor_mode = CurNormal;
-			/* Drop the window off on its new monitor */
-			selmon = xytomon(cursor->x, cursor->y);
-			setmon(grabc, selmon, 0);
-			grabc = NULL;
-			return;
-		}
-		cursor_mode = CurNormal;
-		break;
+			break;
 	}
 	/* If the event wasn't handled by the compositor, notify the client with
 	 * pointer focus that a button press has occurred */
 	wlr_seat_pointer_notify_button(seat,
-			event->time_msec, event->button, event->state);
+								event->time_msec, event->button, event->state);
 }
 
 void
