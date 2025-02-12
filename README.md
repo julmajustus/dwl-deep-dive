@@ -1,10 +1,10 @@
 # Deep Dive into dwl
 
-Welcome to the **Deep Dive into dwl** guide!  
+Welcome to the ultimate **How to dwl** -guide!  
 
 This repository is a step-by-step guide for:
 - **Installing** dwl, a minimal Wayland compositor inspired by dwm.
-- **Patching** and tweaking dwl to suit your needs.
+- **Patching** explaining the patching process and tweaking dwl to suit your needs.
 - **Configuring** keybindings, colors, and behavior via code.
 - **Using** dwl as your daily window manager.
 
@@ -12,17 +12,46 @@ Whether you’re a beginner wanting to learn about minimal window managers or an
 
 **Table of Contents:**
 - [Introduction](#introduction)
+  - [What Is a Window Manager](#what-is-a-window-manager)
+  - [Common Misconceptions About Window Managers](#common-misconceptions-about-window-managers)
+  - [What Does "I'm Using a Window Manager" Mean?](#what-does-im-using-a-window-manager-mean)
+  - [Common Window Managers and Supporting Software](#common-window-managers-and-supporting-software)
+  - [What Is dwl?](#what-is-dwl)
+  - [Why Choose dwl?](#why-choose-dwl)
+- [FAQ](#frequently-asked-questions)
 - [Prerequisites](#prerequisites)
-- [Installation](#installation)
+  - [Compiling wlroots on Ubuntu 24.10](#compiling-wlroots-on-ubuntu-24.10)
+    - [Install Dependencies for dwl and wlroots](#install-dependencies-for-dwl-and-wlroots)
+    - [Clone and Configure wlrtoos](#clone-and-configure-wlroots)
+    - [Build and Install wlroots](#build-and-install-wlroots)
+- [Compiling dwl](#compiling-dwl)
+  - [Clone the Repository](#clone-the-repository)
+  - [Configure config.mk](#configure-config.mk)
+  - [Test Compile dwl](#test-compile-dwl)
+  - [Dry Run dwl](#dry-run-dwl)
+  - [Install a Wayland Terminal Emulator and Application Launcher](#install-a-wayland-terminal-emulator-and-application-launcher)
 - [Patching](#patching)
+  - [Patching dwl](#patching-dwl)
+    - [Patches Used in This Guide](#patches-used-in-this-guide)
+    - [Version Control Best Practices](#version-control-best-practices)
+    - [Downloading the Patches](#downloading-the-patches)
+    - [Applying the Patches](#applying-the-patches)
+    - [Handling Patching Issues](#handling-patching-issues)
+    - [Merging Patches](#merging-patches)
 - [Configuration](#configuration)
+  - [General Configuration](#general-configuration)
+  - [Setup and Install essential programs](#setup-and-install-essential-programs)
 - [Usage](#usage)
+  - [Starting dwl with Login manager](#starting-dwl-with-login-manager)
+  - [Starting dwl from TTY](#starting-dwl-with-login-manager)
+    - [Automate dwl startup from specific TTY](#automate-dwl-startup-from-specific-tty)
+- [What next?](#what-next?)
 - [Troubleshooting](#troubleshooting)
 
 
 # Introduction
 
-**What Is a Window Manager?**
+### What Is a Window Manager?
 
 - **An operating system component that controls window clients on the screen.**
 
@@ -40,7 +69,7 @@ Whether you’re a beginner wanting to learn about minimal window managers or an
 
 ---
 
-**Common Misconceptions About Window Managers**
+### Common Misconceptions About Window Managers
 
 - **"They are so hard to set up."**  
   It depends. Yes, it might take more time than installing a full desktop environment, but once set up, it is built by you—for you. With dwl, you are the maintainer with full control; you choose which features to include and decide when (or if) changes need to be made. Nothing will interrupt your workflow.
@@ -48,12 +77,12 @@ Whether you’re a beginner wanting to learn about minimal window managers or an
 - **"I want to pile my windows and manage them by mouse!"**  
   A little-known secret among window manager users is that most window managers offer a "floating" layout, where you can control window placement just as you would in a traditional desktop environment.
 
-- **"I want to play games on my system."**  
-  Many programs can request a preferred window state—usually floating—so you can run applications that rely on floating windows without any issues.
+- **"I don't want to play my games on tiled windows."**  
+  Many programs can request a preferred window state—usually floating or fullscreen, so you can run your applications without any issues.
 
 ---
 
-**What Does "I'm Using a Window Manager" Mean?**
+### What Does "I'm Using a Window Manager" Mean?
 
 When someone says, "I'm using a window manager," they typically mean that they are not running a full desktop environment (like GNOME, KDE, or XFCE) but rather a minimal system that provides only the basic window management functions. This approach implies that:
 
@@ -77,7 +106,7 @@ In short, "I'm using a window manager" reflects a do-it-yourself philosophy wher
 
 ---
 
-**Common Window Managers and Supporting Software**
+### Common Window Managers and Supporting Software
 
 Below is a list of some popular window managers along with their official websites, as well as common supporting programs that many users incorporate into their custom setups.
 
@@ -123,17 +152,26 @@ Below is a list of some popular window managers along with their official websit
 
 ---
 
-## What is dwl?
+### What Is dwl?
 
 dwl is a minimal, dynamic window manager (really, a Wayland compositor) inspired by the [suckless philosophy](https://suckless.org/philosophy/) behind dwm. It emphasizes simplicity, small code size, and performance over feature bloat. In this guide, you’ll learn not only what dwl is but also how to set it up, customize it, and tailor it to your workflow.
 
-## Why Choose dwl?
+### Why Choose dwl?
 
 - **Simplicity:** No extraneous features—just what you need.
 - **Customization:** Modify the source code directly to tweak behavior and appearance.
 - **Efficiency:** Lightweight and optimized for speed.
 - **Stability:** Once compiled, your binary remains unchanged by updates. Minimal runtime dependencies mean fewer moving parts that could be affected by system updates.
 - **Wayland:** As a modern replacement for the X11 protocol, Wayland is designed to be easier to develop, extend, and maintain.
+
+---
+
+# Frequently Asked Questions
+
+- **Does this break my current desktop environment?**
+  - No, it won't. You can experiment with different window managers and still revert to your existing environment. However, while testing various window managers, keep in mind that installing multiple packages may lead to "dependency hell"—where different packages depend on varying versions of libraries. This scenario might not be ideal for maintaining system stability.
+- **I need `my X11 application`, can I still use dwl?**
+  - Yes, you can. Simply build dwl with the Xwayland compatibility layer enabled to support X11 applications.
 
 ---
 
@@ -144,26 +182,37 @@ Before installing and using dwl, ensure you have the following:
 - **Operating System:** A Linux distribution with Wayland support.
 - **Development Tools:** `git`, `make`, `gcc` (or another C compiler).
 - **Libraries and Dependencies:**  
-  - Wayland libraries (e.g., `libwayland-dev`)
+  - Wayland libraries
   - wlroots
-  - Additional dependencies might include `libxkbcommon-dev`, etc.
+  - xkbcommon
+  - wayland-protocols
+  - pkg-config
+  **XWayland support:
+  - libxcb
+  - libxcb-vm
+  - XWayland
 
-A complete list of the needed dependencies can be found in the [dwl repository](https://codeberg.org/dwl/dwl/src/tag/v0.7).  
-`Package names may differ depending on your distribution.`
+A complete up-to-date list of the needed dependencies can be found in the **[dwl repository](https://codeberg.org/dwl/dwl/src/tag/v0.7)**.  
+
+Note: `Package names may differ depending on your distribution. Refer to your distributions package repository to find the correct dependecies.` 
+
+
+If your distribution of choice has the needed version of wlroots library in the package repository, install that and move to: [Compiling dwl](#compiling-dwl).
+
+--- 
 
 For this guide, we’ll take the more challenging route and install dwl on Ubuntu 24.10 (Oracular Oriole).  
-`Note: Ubuntu 24.10’s repositories contain outdated package versions. A more user-friendly approach is to use a distribution with more up-to-date packages, such as Fedora, OpenSUSE, Arch Linux, or Gentoo.`
+`Note: Ubuntu 24.10’s repositories contain outdated package versions. A more user-friendly approach is to use a distribution with more up-to-date packages.`
 
----
 
-## Building dwl on Ubuntu 24.10 (Oracular Oriole)
+### Compiling wlroots on Ubuntu 24.10
 
-#### The Issue
-   To build dwl v0.7, you need wlroots version 0.18. However, Ubuntu 24.10 only provides wlroots v0.17.4 in its repositories. This mismatch means you must compile both wlroots and dwl from source.
+To build dwl v0.7, you need wlroots version 0.18. However, Ubuntu 24.10 only provides wlroots v0.17.4 in its repositories. This mismatch means you must compile wlroots from source.
 
-#### Steps to Build `dwl` on Ubuntu 24.10
 
-1. **Install Dependencies:**  
+1. ### Install Dependencies for dwl and wlroots
+
+
    Update your package repositories and upgrade:
    ```bash
    sudo apt update && sudo apt upgrade -y
@@ -191,7 +240,7 @@ For this guide, we’ll take the more challenging route and install dwl on Ubunt
    libwlroots-dev
    ```
 
-2. **Clone and Build wlroots:**
+2. ### Clone and Configure wlroots
    Clone the wlroots repository and check out version 0.18.0:
    ```bash
    git clone https://gitlab.freedesktop.org/wlroots/wlroots.git
@@ -229,7 +278,7 @@ For this guide, we’ll take the more challenging route and install dwl on Ubunt
     xwayland        : enabled
    ```
 
-   **Build and install wlroots:**
+3. ### Build and Install wlroots
    ```bash
    ninja -C build
    sudo ninja -C build install
@@ -251,11 +300,13 @@ For this guide, we’ll take the more challenging route and install dwl on Ubunt
 
 ---
 
-# Installation
+# Compiling dwl
+   
+   dwl is designed to be configured and compiled from source. Even if your package manager offers a pre-built package for dwl, that isn’t the intended method of installation. 
 
-Follow these steps to install dwl from source.
+   Follow these steps to compile dwl from source.
 
-1. **Clone the Repository:**
+1. ### Clone the Repository
 
    Clone the dwl repository and check out the v0.7 tag:
    ```bash
@@ -264,7 +315,7 @@ Follow these steps to install dwl from source.
    git checkout v0.7  # Checkout the desired version
    ```
 
-2. **Configure config.mk:**
+2. ### Configure config.mk
 
    To enable XWayland build options, edit `config.mk` and uncomment the following lines:
    ```bash
@@ -280,14 +331,14 @@ Follow these steps to install dwl from source.
    ```
    `(Note: config.def.h holds the default configuration values for dwl. On the first run of make, it may be automatically copied to config.h.)`
 
-4. **Test can we build dwl:**  
+4. ### Test compile dwl  
    Compile dwl:
    ```bash
    make
    ```
    If there are no compile-time errors, dwl is ready for an initial test.
 
-5. **Test dwl:**  
+5. ### Dry Run dwl  
     Run dwl to see if it starts correctly:
    ```bash
    ./dwl
@@ -295,7 +346,7 @@ Follow these steps to install dwl from source.
    You should see a magnificent grey box—this indicates that dwl is up and running! 
    ![dwlrunning](media/dwlgreybox.png)
 
-6. **Install a Wayland Terminal Emulator and Application Launcher:**  
+6. ### Install a Wayland Terminal Emulator and Application Launcher  
 
    dwl defaults to using the foot terminal—a modern and minimal Wayland terminal emulator. You can change the default later in config.h. For now, install foot and wmenu (for launching applications):
    ```bash
@@ -331,33 +382,34 @@ One of the joys of suckless software is the ability to patch the source to add n
 
 2. **Applying a Patch:**
 
-  If you have a patch file (e.g., myfeature.patch), you can apply it in several ways:
+   If you have a patch file (e.g., myfeature.patch), you can apply it in several ways:
 
-  ```bash
+   ```bash
    git am -3 path/to/myfeature.path
 
    git apply path/to/myfeature.patch
    
    patch -p1 < path/to/myfeature.patch 
-  ```
-  Make sure you run the command in the root of the dwl source directory. (Using Git commands assumes the source is under version control.)
+   ```
+   Make sure you run the command in the root of the dwl source directory. (Using Git commands assumes the source is under version control.)
 
 3. **Review the Patch:**
 
-  Always review the changes in the patch file to understand what modifications it makes.
+   Always review the changes in the patch file to understand what modifications it makes.
 
 4. **Rebuild:**
 
-  After applying a patch, rebuild dwl to incorporate the changes:
+   After applying a patch, rebuild dwl to incorporate the changes:
 
    ```bash
    make clean all
    ```
+   `Note: Patches usually update dwl's config.def.h. If you encounter compile errors and already have a config.h file, make sure to update it accordingly.`
 
 
-## Patching our dwl
+## Patching dwl
 
-1. **Patches Used in This Guide:**  
+1. ### Patches Used in This Guide  
 
    - [btrtile](https://codeberg.org/dwl/dwl-patches/src/branch/main/patches/btrtile)  
      A tiling layout that gives the user more control over tiled clients, with full support for managing clients via both keyboard and mouse.
@@ -383,38 +435,38 @@ One of the joys of suckless software is the ability to patch the source to add n
 --- 
 
 
-2. **Version Control Best Practices:**
+2. ### Version Control Best Practices
 
-	It’s best to use Git to track changes while applying patches. You can:
-	- Create separate branches for each patch. This makes applying patches to an unmodified dwl source smoother, though merging later may be more involved. 
+   It’s best to use Git to track changes while applying patches. You can:
+    - Create separate branches for each patch. This makes applying patches to an unmodified dwl source smoother, though merging later may be more involved. 
     - Commit after applying each patch. This provides version control and the ability to revert changes if necessary.
 
 3. **Create repository for our dwl**  
-	(Optional) You can use a local Git repository or create a fork of the dwl repository.   
-    For this guide, we’ll clone the upstream repository:
-    ```bash
-    git clone yourrepo
-    git remote add --fetch upstream https://codeberg.org/dwl/dwl
-    git fetch upstream --tags
-    git checkout -b my-dwl tags/v0.7
-    ```
-    Now we should have our own dwl branch.
+   (Optional) You can use a local Git repository or create a fork of the dwl repository.   
+   For this guide, we’ll clone the upstream repository:
+   ```bash
+   git clone yourrepo
+   git remote add --fetch upstream https://codeberg.org/dwl/dwl
+   git fetch upstream --tags
+   git checkout -b my-dwl tags/v0.7
+   ```
+   Now we should have our own dwl branch.
 
 --- 
 
-4. - **Download the Needed Patches:**
+4.  ### Downloading the Patches
 
-    Paste the following commands into your terminal to download all patch files:
-    ```bash
-    wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/rotatetags/rotatetags.patch
-    wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/warpcursor/warpcursor.patch
-    wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/pertag/pertag.patch
-    wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/gaps/gaps.patch
-    wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/focusdir/focusdir.patch
-    wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/btrtile/btrtile-v0.7-gaps.patch
-    wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/ipc/ipc.patch
-    wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/ipc/ipcpertag.patch
-    ```
+   Paste the following commands into your terminal to download all patch files:
+   ```bash
+   wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/rotatetags/rotatetags.patch
+   wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/warpcursor/warpcursor.patch
+   wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/pertag/pertag.patch
+   wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/gaps/gaps.patch
+   wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/focusdir/focusdir.patch
+   wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/btrtile/btrtile-v0.7-gaps.patch
+   wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/ipc/ipc.patch
+   wget https://codeberg.org/dwl/dwl-patches/raw/branch/main/patches/ipc/ipcpertag.patch
+   ```
 
    Create a directory for the patches and move the files:  
    ```bash
@@ -429,137 +481,137 @@ One of the joys of suckless software is the ability to patch the source to add n
    ```
    Might need extra steps to setup the upstream for the branch. (push --set-upstream origin my-dwl)
 
-5. - **Apply the Patches**  
-	Create a branch for each patch and apply them:
-    ```bash
-    git branch btrtile-patched
-    git checkout btrtile-patched
-    git am -3 patches/btrtile-v0.7-gaps.patch 
-    git checkout my-dwl
+5.  ### Applying the Patches  
+   Create a branch for each patch and apply them:
+   ```bash
+   git branch btrtile-patched
+   git checkout btrtile-patched
+   git am -3 patches/btrtile-v0.7-gaps.patch 
+   git checkout my-dwl
 
-    git branch gaps-patched
-    git checkout gaps-patched
-    git am -3 patches/gaps.patch
-    git checkout my-dwl
+   git branch gaps-patched
+   git checkout gaps-patched
+   git am -3 patches/gaps.patch
+   git checkout my-dwl
 
-    git branch pertag-patched
-    git checkout pertag-patched
-    git am -3 patches/pertag.patch
-    git checkout my-dwl
+   git branch pertag-patched
+   git checkout pertag-patched
+   git am -3 patches/pertag.patch
+   git checkout my-dwl
 
-    git branch focusdir-patched
-    git checkout focusdir-patched
-    git am -3 patches/focusdir.patch
-    git checkout my-dwl
+   git branch focusdir-patched
+   git checkout focusdir-patched
+   git am -3 patches/focusdir.patch
+   git checkout my-dwl
 
-    git branch rotatetags-patched
-    git checkout rotatetags-patched
-    git am -3 patches/rotatetags.patch
-    git checkout my-dwl
+   git branch rotatetags-patched
+   git checkout rotatetags-patched
+   git am -3 patches/rotatetags.patch
+   git checkout my-dwl
 
-    git branch warpcursor-patched
-    git checkout warpcursor-patched
-    git am -3 patches/warpcursor.patch
-    git checkout my-dwl
+   git branch warpcursor-patched
+   git checkout warpcursor-patched
+   git am -3 patches/warpcursor.patch
+   git checkout my-dwl
 
-    git branch ipc-patched
-    git checkout ipc-patched
-    git am -3 patches/ipc.patch
-    ```
-    **Handling the ipc Patch Issue:**  
-    When applying the ipc patch, you might encounter errors like:
-    ```bash
-    Applying: implement dwl-ipc-unstable-v2 https://codeberg.org/dwl/dwl-patches/wiki/ipc
-    Using index info to reconstruct a base tree...
-    M	Makefile
-    M	dwl.c
-    Falling back to patching base and 3-way merge...
-    Auto-merging dwl.c
-    CONFLICT (content): Merge conflict in dwl.c
-    Auto-merging Makefile
-    error: Failed to merge in the changes.
-    Patch failed at 0001 implement dwl-ipc-unstable-v2 https://codeberg.org/dwl/dwl-patches/wiki/ipc
-    ```
-    Since this patch lacks the necessary Git metadata, try using a different method:
-    ```bash
-    git am --abort
-    git apply patches/ipc.patch
-    error: patch failed: Makefile:17
-    error: Makefile: patch does not apply
-    error: patch failed: dwl.c:2033
-    error: dwl.c: patch does not apply
-    ```
-    If that fails, resort to the patch command:
-    ```bash
-    patch -p1 < patches/ipcpertag.patch
-    patching file Makefile
-    Hunk #1 succeeded at 17 with fuzz 1.
-    patching file config.def.h
-    patching file dwl.c
-    Hunk #1 succeeded at 67 (offset -1 lines).
-    Hunk #2 succeeded at 144 (offset -1 lines).
-    Hunk #3 succeeded at 195 (offset -1 lines).
-    Hunk #4 succeeded at 293 (offset -1 lines).
-    Hunk #6 succeeded at 433 (offset 2 lines).
-    Hunk #7 succeeded at 729 (offset 3 lines).
-    Hunk #8 succeeded at 1013 (offset 3 lines).
-    Hunk #9 succeeded at 1365 (offset 2 lines).
-    Hunk #10 FAILED at 2248.
-    Hunk #11 succeeded at 2840 (offset 41 lines).
-    Hunk #12 succeeded at 2939 (offset 41 lines).
-    1 out of 12 hunks FAILED -- saving rejects to file dwl.c.rej
-    patching file protocols/dwl-ipc-unstable-v2.xml
-    ```
+   git branch ipc-patched
+   git checkout ipc-patched
+   git am -3 patches/ipc.patch
+   ```
+### Handling Patching Issues
 
-    Now lets see what's causing issues by opening dwl.c.rej with your favorite text editor:
-    ```bash
-    vim dwl.c.rej
-    ```
-    
-    ![dwlpatchfail](media/dwlpatchfail.png)
+   When applying the ipc patch, you might encounter errors like:
+   ```bash
+   Applying: implement dwl-ipc-unstable-v2 https://codeberg.org/dwl/dwl-patches/wiki/ipc
+   Using index info to reconstruct a base tree...
+   M	Makefile
+   M	dwl.c
+   Falling back to patching base and 3-way merge...
+   Auto-merging dwl.c
+   CONFLICT (content): Merge conflict in dwl.c
+   Auto-merging Makefile
+   error: Failed to merge in the changes.
+   Patch failed at 0001 implement dwl-ipc-unstable-v2 https://codeberg.org/dwl/dwl-patches/wiki/ipc
+   ```
+   Since this patch lacks the necessary Git metadata, try using a different method:
+   ```bash
+   git am --abort
+   git apply patches/ipc.patch
+   error: patch failed: Makefile:17
+   error: Makefile: patch does not apply
+   error: patch failed: dwl.c:2033
+   error: dwl.c: patch does not apply
+   ```
+   If that fails, resort to the patch command:
+   ```bash
+   patch -p1 < patches/ipcpertag.patch
+   patching file Makefile
+   Hunk #1 succeeded at 17 with fuzz 1.
+   patching file config.def.h
+   patching file dwl.c
+   Hunk #1 succeeded at 67 (offset -1 lines).
+   Hunk #2 succeeded at 144 (offset -1 lines).
+   Hunk #3 succeeded at 195 (offset -1 lines).
+   Hunk #4 succeeded at 293 (offset -1 lines).
+   Hunk #6 succeeded at 433 (offset 2 lines).
+   Hunk #7 succeeded at 729 (offset 3 lines).
+   Hunk #8 succeeded at 1013 (offset 3 lines).
+   Hunk #9 succeeded at 1365 (offset 2 lines).
+   Hunk #10 FAILED at 2248.
+   Hunk #11 succeeded at 2840 (offset 41 lines).
+   Hunk #12 succeeded at 2939 (offset 41 lines).
+   1 out of 12 hunks FAILED -- saving rejects to file dwl.c.rej
+   patching file protocols/dwl-ipc-unstable-v2.xml
+   ```
 
-    Rejection file shows that the first problem occured after line 2248 at `printstatus` function, when applying patch hunk 10.
-    Patch diff shows code that it tries to remove with red color and green indicadetes the code it tries to add.
-    
-    Lets open the source code for dwl.
-    
-    ```bash
-    vim dwl.c
-    #lets find the rejected section /printstatus
-    ```
-    Locate the `printstatus` function and manually adjust it according to the patch’s diff. The corrected function should look like:
-    ```code
-    void
-    printstatus(void)
-    {
-    	Monitor *m = NULL;
-    
-    	wl_list_for_each(m, &mons, link)
-    		dwl_ipc_output_printstatus(m);
-    }
-    ```
-    Remove any .rej and .orig files:
-    ```bash
-    rm *.rej && rm *.orig
-    ```
-	Then build dwl to verify that the patch was successfully applied:
-    ```bash
-    make
-    ./dwl
-    ```
-    Once confirmed, clean up and commit your changes:
-    ```bash
-    make clean && rm config.h
-    git add .
-    git commit -m "ipc-patched"
-    ```
-    Finally, apply the ipcpertag patch:
-    ```bash
-    git am -3 patches/ipcpertag.patch
-    git checkout my-dwl
-    ```
+   Now lets see what's causing issues by opening dwl.c.rej with your favorite text editor:
+   ```bash
+   vim dwl.c.rej
+   ```
+   
+   ![dwlpatchfail](media/dwlpatchfail.png)
 
-6. - **Now lets merge the patches to our main branch**
+   Rejection file shows that the first problem occured after line 2248 at `printstatus` function, when applying patch hunk 10.
+   Patch diff shows code that it tries to remove with red color and green indicadetes the code it tries to add.
+   
+   Lets open the source code for dwl.
+   
+   ```bash
+   vim dwl.c
+   ```
+   Locate the `printstatus` function and manually adjust it according to the patch’s diff. The corrected function should look like:
+   ```code
+   void
+   printstatus(void)
+   {
+   	Monitor *m = NULL;
+   
+   	wl_list_for_each(m, &mons, link)
+   		dwl_ipc_output_printstatus(m);
+   }
+   ```
+   Remove any .rej and .orig files:
+   ```bash
+   rm *.rej && rm *.orig
+   ```
+   Then build dwl to verify that the patch was successfully applied:
+   ```bash
+   make
+   ./dwl
+   ```
+   Once confirmed, clean up and commit your changes:
+   ```bash
+   make clean && rm config.h
+   git add .
+   git commit -m "ipc-patched"
+   ```
+   Finally, apply the ipcpertag patch:
+   ```bash
+   git am -3 patches/ipcpertag.patch
+   git checkout my-dwl
+   ```
+
+6.  ### Merging Patches
 
    From your main branch (my-dwl), merge each patch branch:
    ```bash
@@ -655,9 +707,9 @@ One of the joys of suckless software is the ability to patch the source to add n
 
 # Configuration
 
-dwl is configured by modifying its configuration header directly. Here’s how to get started:
+   dwl is configured by modifying its configuration header directly. Here’s how to get started:
 
-## General Configuration Procedure
+### General Configuration
 
 1. - **Locate the Configuration File:**
 
@@ -670,34 +722,34 @@ dwl is configured by modifying its configuration header directly. Here’s how t
 
 2. - **Key Settings in config.h:**
 
-       - Colors:   
-       Adjust window border colors.
-       - TAGCOUNT:  
-       Defines tag count, similar to workspaces or virtual desktops.
-       - rules:  
-       Add window rules for specific clients, you need to know the application title. (You can choose to open some programs always on floating state etc.)
-       - layouts:  
-       Avaivable tiling layouts, defines how the clients are tiled/organised on the desktop. Defaults to the first option on the list.
-       - monrules:  
-       Monitor configure your monitor settings to your liking. If using single monitor setup, the default NULL option usually works great.
-       - xkb_rules:  
-       Keyboard settings.
-       - MODKEY:  
-       Define the modifier key, defaults to ALT but common practice is to change it to `super`/`windows`/`command`-key aka WLR_MODIFIER_LOGO.
-       - TAGKEYS:  
-       Keybindings to switch the view between tags and send clients to other tags.
-       -SHCMD:  
-       Shell spawn programs with, you can call these with your keybindings.
-       - Keys:   
-       Section where keybindings are defined and change them as needed.
-       - buttons:  
-       Mouse related bindings.
+     - Colors:   
+     Adjust window border colors.
+     - TAGCOUNT:  
+     Defines tag count, similar to workspaces or virtual desktops.
+     - rules:  
+     Add window rules for specific clients, you need to know the application title. (You can choose to open some programs always on floating state etc.)
+     - layouts:  
+     Avaivable tiling layouts, defines how the clients are tiled/organised on the desktop. Defaults to the first option on the list.
+     - monrules:  
+     Monitor configure your monitor settings to your liking. If using single monitor setup, the default NULL option usually works great.
+     - xkb_rules:  
+     Keyboard settings.
+     - MODKEY:  
+     Define the modifier key, defaults to ALT but common practice is to change it to `super`/`windows`/`command`-key aka WLR_MODIFIER_LOGO.
+     - TAGKEYS:  
+     Keybindings to switch the view between tags and send clients to other tags.
+     -SHCMD:  
+     Shell spawn programs with, you can call these with your keybindings.
+     - Keys:   
+     Section where keybindings are defined and change them as needed.
+     - buttons:  
+     Mouse related bindings.
   
-  For reference, you can check [my config.h](https://github.com/julmajustus/dwl-deep-dive/blob/my-dwl/config.h). (Some configuration options in my file might conflict with your setup, such as monitor configurations or locally installed programs.)
+   For reference, you can check [my config.h](https://github.com/julmajustus/dwl-deep-dive/blob/my-dwl/config.h). (Some configuration options in my file might conflict with your setup, such as monitor configurations or locally installed programs.)
 
 3. - **Rebuild dwl:**
 
-  After making changes, rebuild the compositor:
+   After making changes, rebuild the compositor:
 
    ```bash
    make clean all
@@ -705,151 +757,282 @@ dwl is configured by modifying its configuration header directly. Here’s how t
 
 4. - **Testing Your Changes:**  
 
-Restart your session or run dwl in a nested environment to see your changes in action.
+   Restart your session or run dwl in a nested environment to see your changes in action.
 
-## Setup and install essential programs to use with our dwl
+### Setup and install essential programs
 
-Even after configuring dwl, a few additional programs are needed to create a fully usable environment.   
-For this guide we will install:
-  - A status bar: [waybar](https://github.com/Alexays/Waybar).
-  - Program to set desktop wallpaper: [swaybg](https://github.com/swaywm/swaybg).
-  - Notification daemon: [mako](https://github.com/emersion/mako).
-  - Create a start up script to call our programs on startup.
+   Even after configuring dwl, a few additional programs are needed to create a fully usable environment.   
+   For this guide we will install:
+   - A status bar: [waybar](https://github.com/Alexays/Waybar).
+   - Program to set desktop wallpaper: [swaybg](https://github.com/swaywm/swaybg).
+   - Notification daemon: [mako](https://github.com/emersion/mako).
+   - Create a start up script to call our programs on startup.
   
-  Install the programs:
-  ```bash
-  sudo apt install -y waybar swaybg mako-notifier
-  ```
-  Create your startup script (e.g., ~/.local/bin/dwl-startup.sh):
-  ```bash
-  #!/bin/bash
-
-  # Kill already running dublicate process
-  _ps=(waybar mako swaybg)
-  for _prs in "${_ps[@]}"; do
-  	if [[ `pidof ${_prs}` ]]; then
-  		killall -9 ${_prs}
-  	fi
-  done
-
-  # Start our applications
-  swaybg --output '*' --mode center  --image /path-to-your-favorite-wallpaper &
-  mako &
-  waybar &
-  foot --server &
-  ```
-  Make the script executable:
-  ```bash
-  chmod +x ~/.local/bin/dwl-startup.sh
-  ```
-  Test the startup script with dwl:
-  ```bash
-  make
-  ./dwl -s ~/.local/bin/dwl-startup.sh
-  ```
-  ![dwlwithbar](media/dwlwithbar.png)
-  Now we should have a running dwl setup with status bar, desktop wallpaper and notification manager.
-  For the scope of this guide, we're not going to dive into configuring the support programs, but let's enable dwl related options from out Waybar statusbar.
-  
-  To integrate Waybar with dwl, copy the default Waybar configuration to your local config directory:
-  ```bash
-  cp -r /etc/xdg/waybar/ ~/.config/
-  ```
-  Edit the config with your favorite editor:
-  ```bash
-  vim ~/.config/waybar/config.jsonc
-  ```
-  Locate the section:
-  ```bash
-  "modules-left": [
-        "sway/workspaces",
-        "sway/mode",
-        "sway/scratchpad",
-        "custom/media"
-    ],
+   Install the programs:
+   ```bash
+   sudo apt install -y waybar swaybg mako-notifier
+   ```
+   Create your startup script (e.g., ~/.local/bin/dwl-startup.sh):
+   ```bash
+   #!/bin/bash
+ 
+   # Kill already running dublicate process
+   _ps=(waybar mako swaybg)
+   for _prs in "${_ps[@]}"; do
+   	if [[ `pidof ${_prs}` ]]; then
+   		killall -9 ${_prs}
+   	fi
+   done
+ 
+   # Start our applications
+   swaybg --output '*' --mode center  --image /path-to-your-favorite-wallpaper &
+   mako &
+   waybar &
+   foot --server &
+   ```
+   Make the script executable:
+   ```bash
+   chmod +x ~/.local/bin/dwl-startup.sh
+   ```
+   Test the startup script with dwl:
+   ```bash
+   make
+   ./dwl -s ~/.local/bin/dwl-startup.sh
+   ```
+   ![dwlwithbar](media/dwlwithbar.png)
+   Now we should have a running dwl setup with status bar, desktop wallpaper and notification manager.
+   For the scope of this guide, we're not going to dive into configuring the support programs, but let's enable dwl related options from out Waybar statusbar.
+   
+   To integrate Waybar with dwl, copy the default Waybar configuration to your local config directory:
+   ```bash
+   cp -r /etc/xdg/waybar/ ~/.config/
+   ```
+   Edit the config with your favorite editor:
+   ```bash
+   vim ~/.config/waybar/config.jsonc
+   ```
+   Locate the section:
+   ```bash
+   "modules-left": [
+         "sway/workspaces",
+         "sway/mode",
+         "sway/scratchpad",
+         "custom/media"
+     ],
    ```
    Replace it with dwl-specific modules:
    ```bash
-  "modules-left": [
-        "dwl/tags",
-        "custom/media"
-    ],
-  ```
-  Add a tag module for dwl under "Modules configuration":
-  ```bash
-   "dwl/tags": {
-            "num-tags": 17,
-            "tag-labels": [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17" ],
-            "disable-click": false
-    },
-  ```
-  Note: The num-tags value must match your TAGCOUNT in config.h
-  Next, edit the Waybar stylesheet:
-  ```bash
-  vim ~/.config/waybar/style.css
-  ```
-  Append the following styles:
-  ```bash
-  #tags button {
-  	color: #343A40;
-  	padding: 0 3px;
-  	
-  }
-  
-  #tags button.occupied {
-  	color: #bbbbbb;
-  	
-  }
-  
-  #tags button.focused {
-  	color: #9EE9EA;
-  }
-  
-  #tags button.urgent {
-  	color: #E49186;
-  }
-  ```
-  ![dwltagsonwaybar](media/dwltagsonwaybar.png)
-  Now we have waybar showing our current tags on status bar!  
-
-  For further configuration of Waybar, refer to the [Waybar Wiki](https://github.com/Alexays/Waybar/wiki).
+   "modules-left": [
+         "dwl/tags",
+         "custom/media"
+     ],
+   ```
+   Add a tag module for dwl under "Modules configuration":
+   ```bash
+    "dwl/tags": {
+             "num-tags": 17,
+             "tag-labels": [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17" ],
+             "disable-click": false
+     },
+   ```
+   Note: The num-tags value must match your TAGCOUNT in config.h
+   Next, edit the Waybar stylesheet:
+   ```bash
+   vim ~/.config/waybar/style.css
+   ```
+   Append the following styles:
+   ```bash
+   #tags button {
+   	color: #343A40;
+   	padding: 0 3px;
+   	
+   }
+   
+   #tags button.occupied {
+   	color: #bbbbbb;
+   	
+   }
+   
+   #tags button.focused {
+   	color: #9EE9EA;
+   }
+   
+   #tags button.urgent {
+   	color: #E49186;
+   }
+   ```
+   ![dwltagsonwaybar](media/dwltagsonwaybar.png)
+   Now we have waybar showing our current tags on status bar!  
+ 
+   For further configuration of Waybar, refer to the [Waybar Wiki](https://github.com/Alexays/Waybar/wiki).
 
 ---
 
 # Usage
 
-## Install dwl system wide
-  Once your setup is working with all necessary programs, install dwl system-wide.
+   Once your setup is working with all necessary programs, install dwl system-wide and setup dwl for starting from login manager or TTY.
 
-  **Starting dwl:**
+   **Starting dwl:**
 
    Depending on your setup, you might start dwl via:
-   - A display manager session (select dwl from the session options)
-   - A command-line start in a TTY (ensure your environment is configured to run Wayland compositors; additional environment variables might be needed)
+   - [A display manager session](#starting-dwl-with-login-manager)
+   - [A command-line start in a TTY](#starting-dwl-from-tty)
 
-  For this guide, we’ll launch dwl from the display manager. Edit the dwl.desktop file in your dwl directory:
-  ```bash
-  vim dwl.desktop
-  ```
-  Update the Exec line to use your startup script:
-  ```bash
-  [Desktop Entry]
-  Name=dwl
-  Comment=dwm for Wayland
-  Exec=dwl -s ~/.local/bin/dwl-startup.sh
-  Type=Application
-  ```
-  Then install dwl system-wide:
-  ```bash
-  sudo make clean install
-  ```
-  Log out of your current desktop environment; dwl should now appear in the available session menu. 
-  ![dwlloginscreen](media/dwlloginscreen.png)
-  Select dwl and log in.
-  ![dwlworking](media/dwlworking.png)
 
-  Congratulations—you’ve successfully patched and installed a working dwl window manager!
+### Starting dwl with Login manager
 
+   For this guide, we’ll launch dwl from the login manager (display manager).  
+   Edit the dwl.desktop file in your dwl directory:
+   ```bash
+   vim dwl.desktop
+   ```
+   Update the Exec line to use your startup script:
+   ```bash
+   [Desktop Entry]
+   Name=dwl
+   Comment=dwm for Wayland
+   Exec=dwl -s ~/.local/bin/dwl-startup.sh
+   Type=Application
+   ```
+   Then install dwl system-wide:
+   ```bash
+   sudo make clean install
+   ```
+   Log out of your current desktop environment; dwl should now appear in the available session menu. 
+   ![dwlloginscreen](media/dwlloginscreen.png)
+   Select dwl and log in.
+   ![dwlworking](media/dwlworking.png)
+
+   Congratulations—you’ve successfully patched and installed a working dwl window manager!
+
+---
+
+### Starting dwl from TTY
+
+   Some login managers might not support Wayland, and if you prefer a minimal setup, dwl can be easily started from a TTY.  
+
+   `Note: Login managers often handle essential components automatically (such as starting a DBus session and setting required environment variables). When launching dwl directly, you might need to manually configure these components.`  
+   
+   Install dwl system-wide:
+   ```bash
+   sudo make clean install
+   ```
+
+   **Setting up the environment**  
+   `Note: You can change TTYs with Ctrl+Alt+ F1-F6`  
+   First try starting dwl from TTY:
+   ```bash
+   dwl -s ~/.local/bin/dwl-startup.sh
+   ```
+   If dwl starts run:
+   ```bash
+   env | grep -E 'XDG|DBUS'
+   ```
+   Output should be something like this:
+   ```bash
+   XDG_SEAT=seat0
+   XDG_SESSION_DESKTOP=wlroots
+   XDG_SESSION_TYPE=wayland
+   XDG_CURRENT_DESKTOP=wlroots
+   XDG_SESSION_CLASS=user
+   XDG_VTNR=1
+   XDG_SESSION_ID=1
+   XDG_RUNTIME_DIR=/run/user/1000
+   DBUS_SESSION_BUS_ADDRESS=unix:path=somepathtodbussession
+   ```
+   If dwl does not start or some of the needed variables are missing create a script to add needed variables:
+   ```bash
+   vim ~/.local/bin/start-dwl-tty.sh
+   ```
+   Below is an example of my TTY start script for dwl::
+   ```bash
+   #!/bin/sh
+
+   # --- Session settings ---
+   export XDG_CURRENT_DESKTOP=wlroots
+   export XDG_SESSION_TYPE=wayland
+   export XDG_SESSION_DESKTOP=wlroots
+   export XDG_RUNTIME_DIR=/run/user/$(id -u)
+   
+   # --- Wayland settings ---
+   export GDK_BACKEND=wayland,x11,*
+   export QT_QPA_PLATFORM=wayland
+   #export QT_QPA_PLATFORM="wayland;xcb"
+   export QT_QPA_PLATFORMTHEME=qt5ct
+   export QT_AUTO_SCREEN_SCALE_FACTOR=1
+   #export  QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+   export SDL_VIDEODRIVER=wayland
+   #export SDL_VIDEODRIVER="wayland,x11"
+   export CLUTTER_BACKEND=wayland
+   export _JAVA_AWT_WM_NONREPARENTING=1
+   
+   # --- Wlroots Settings ---
+   export WLR_NO_HARDWARE_CURSORS=1
+   export WLR_SCENE_DISABLE_DIRECT_SCANOUT=1
+   export WLR_DRM_FORCE_LIBLIFTOFF=0
+   #export WLR_DRM_NO_ATOMIC=1
+   export WLR_DRM_NO_MODIFIERS=1
+   #export WLR_RENDERER_ALLOW_SOFTWARE=1
+   #export WLR_RENDERER=vulkan
+   export WLR_RENDERER=gles2
+   
+   # --- Misc ---
+   export TERM=foot-client
+   export FILES=thunar
+   export BROWSER=firefox
+   export MOZ_ENABLE_WAYLAND=1
+   
+   # Starting dbus-session might require hard path.
+   dbus-run-session dwl -s /home/yourusername/.local/bin/dwl-startup.sh
+   ```
+   Note:  
+   - Customization: Comment out or delete sections if you're unsure about their necessity for your setup.
+   - Session Settings: Ensure that the session settings are included.
+   - DBus Session: If you don't have an active DBus session, include the dbus-run-session command to start one along with dwl.
+
+   **Additional Resources on Environment Variables**
+
+   For more in-depth explanations and guides on setting up environment variables for Wayland and related projects, check out the following resources: 
+   - [Archwiki: Wayland Environment Variables](https://wiki.archlinux.org/title/Wayland#GUI_libraries)
+   - [Wlroots Documentation: Environment Variables](https://gitlab.freedesktop.org/wlroots/wlroots/-/blob/master/docs/env_vars.md)
+   - [Ubuntu's Guide for Wayland Environment Variables](https://discourse.ubuntu.com/t/environment-variables-for-wayland-hackers/12750)  
+
+
+   Remember to make the script executable:
+   ```bash
+   chmod +x ~/.local/bin/start-dwl-tty.sh
+   ```
+
+---
+
+### Automate dwl startup from specific TTY
+
+   While dwl can be started manually by running:
+   ```bash
+   ~/.local/bin/start-dwl-tty.sh
+   ```
+   Many users prefer to automate the startup process when logging into a specific TTY.  
+
+   The correct automation method depends on your user shell. If you're not sure which shell you're using, you can check by running:
+   ```bash
+   echo $SHELL
+   ```
+   Depending to your shell:
+   - BASH and ZSH
+     Edit or create `.bash_profile`, `.zlogin` or `.zprofile` usually found from user home directory or from ~/.config/.
+     ```bash
+     # Start dwl from tty1
+     [ "$(tty)" = "/dev/tty1" ] && exec ~/.local/bin/start-dwl-tty.sh
+     ```
+   - FISH
+     Create a file: `~/.config/fish/conf.d/startdwl.fish`
+     ```bash
+     # If running from tty1 start sway
+     set TTY1 (tty)
+     [ "$TTY1" = "/dev/tty1" ] && exec ~/.local/bin/start-dwl-tty.sh
+     ```
+
+  
 ---
 
 ## What next?
@@ -886,7 +1069,7 @@ Here are some common issues you might encounter and tips on how to resolve them:
 
 1. **Build Errors:**
    - Ensure all dependencies are installed.
-   - Check that you are using the correct compiler and build tools.
+   - If compiling fails after patching, check that you also updated your config.h.
 
 2. **Configuration Not Applying:**
    - Verify that you edited the correct configuration file.
