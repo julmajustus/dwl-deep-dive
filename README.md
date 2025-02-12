@@ -202,7 +202,7 @@ If your distribution of choice has the needed version of wlroots library in the 
 --- 
 
 For this guide, we’ll take the more challenging route and install dwl on Ubuntu 24.10 (Oracular Oriole).  
-`Note: Ubuntu 24.10’s repositories contain outdated package versions. A more user-friendly approach is to use a distribution with more up-to-date packages.`
+Note: `Ubuntu 24.10’s repositories contain outdated package versions. A more user-friendly approach is to use a distribution with more up-to-date packages.`
 
 
 ### Compiling wlroots on Ubuntu 24.10
@@ -329,7 +329,7 @@ To build dwl v0.7, you need wlroots version 0.18. However, Ubuntu 24.10 only pro
    ```bash
    cp config.def.h config.h
    ```
-   `(Note: config.def.h holds the default configuration values for dwl. On the first run of make, it may be automatically copied to config.h.)`
+   Note: `config.def.h holds the default configuration values for dwl. On the first run of make, it may be automatically copied to config.h.`
 
 4. ### Test compile dwl  
    Compile dwl:
@@ -404,7 +404,7 @@ One of the joys of suckless software is the ability to patch the source to add n
    ```bash
    make clean all
    ```
-   `Note: Patches usually update dwl's config.def.h. If you encounter compile errors and already have a config.h file, make sure to update it accordingly.`
+   Note: `Patches usually update dwl's config.def.h. If you encounter compile errors and already have a config.h file, make sure to update it accordingly.`
 
 
 ## Patching dwl
@@ -835,7 +835,7 @@ One of the joys of suckless software is the ability to patch the source to add n
              "disable-click": false
      },
    ```
-   Note: The num-tags value must match your TAGCOUNT in config.h
+   Note: `The num-tags value must match your TAGCOUNT in config.h`
    Next, edit the Waybar stylesheet:
    ```bash
    vim ~/.config/waybar/style.css
@@ -911,7 +911,7 @@ One of the joys of suckless software is the ability to patch the source to add n
 
    Some login managers might not support Wayland, and if you prefer a minimal setup, dwl can be easily started from a TTY.  
 
-   `Note: Login managers often handle essential components automatically (such as starting a DBus session and setting required environment variables). When launching dwl directly, you might need to manually configure these components.`  
+   Note: `Login managers often handle essential components automatically (such as starting a DBus session and setting required environment variables). When launching dwl directly, you might need to manually configure these components.`  
    
    Install dwl system-wide:
    ```bash
@@ -919,7 +919,7 @@ One of the joys of suckless software is the ability to patch the source to add n
    ```
 
    **Setting up the environment**  
-   `Note: You can change TTYs with Ctrl+Alt+ F1-F6`  
+   Note: `You can change TTYs with Ctrl+Alt+ F1-F6`  
    First try starting dwl from TTY:
    ```bash
    dwl -s ~/.local/bin/dwl-startup.sh
