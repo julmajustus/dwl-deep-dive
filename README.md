@@ -484,38 +484,25 @@ One of the joys of suckless software is the ability to patch the source to add n
 5.  ### Applying the Patches  
    Create a branch for each patch and apply them:
    ```bash
-   git branch btrtile-patched
-   git checkout btrtile-patched
+   git checkout -b btrtile-patched my-dwl
    git am -3 patches/btrtile-v0.7-gaps.patch 
-   git checkout my-dwl
 
-   git branch gaps-patched
-   git checkout gaps-patched
+   git checkout -b gaps-patched my-dwl
    git am -3 patches/gaps.patch
-   git checkout my-dwl
 
-   git branch pertag-patched
-   git checkout pertag-patched
+   git checkout -b pertag-patched my-dwl
    git am -3 patches/pertag.patch
-   git checkout my-dwl
 
-   git branch focusdir-patched
-   git checkout focusdir-patched
+   git checkout -b focusdir-patched my-dwl
    git am -3 patches/focusdir.patch
-   git checkout my-dwl
 
-   git branch rotatetags-patched
-   git checkout rotatetags-patched
+   git checkout -b rotatetags-patched my-dwl
    git am -3 patches/rotatetags.patch
-   git checkout my-dwl
 
-   git branch warpcursor-patched
-   git checkout warpcursor-patched
+   git checkout -b warpcursor-patched my-dwl
    git am -3 patches/warpcursor.patch
-   git checkout my-dwl
 
-   git branch ipc-patched
-   git checkout ipc-patched
+   git checkout -b ipc-patched my-dwl
    git am -3 patches/ipc.patch
    ```
 ### Handling Patching Issues
