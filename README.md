@@ -764,12 +764,12 @@ One of the joys of suckless software is the ability to patch the source to add n
    #!/bin/bash
  
    # Kill already running dublicate process
-   _ps=(waybar mako swaybg)
-   for _prs in "${_ps[@]}"; do
-   	if [[ `pidof ${_prs}` ]]; then
-   		killall -9 ${_prs}
-   	fi
-   done
+   _ps="waybar mako swaybg"
+   for _prs in $_ps; do
+       if [ "$(pidof "${_prs}")" ]; then
+            killall -9 "${_prs}"
+       fi
+    done
  
    # Start our applications
    swaybg --output '*' --mode center  --image /path-to-your-favorite-wallpaper &
@@ -931,7 +931,7 @@ One of the joys of suckless software is the ability to patch the source to add n
    ```bash
    vim ~/.local/bin/start-dwl-tty.sh
    ```
-   Below is an example of my TTY start script for dwl::
+   Below is an example of small TTY start script for dwl::
    ```bash
    #!/bin/sh
 
@@ -939,41 +939,11 @@ One of the joys of suckless software is the ability to patch the source to add n
    export XDG_CURRENT_DESKTOP=wlroots
    export XDG_SESSION_TYPE=wayland
    export XDG_SESSION_DESKTOP=wlroots
-   export XDG_RUNTIME_DIR=/run/user/$(id -u)
-   
-   # --- Wayland settings ---
-   export GDK_BACKEND=wayland,x11,*
-   export QT_QPA_PLATFORM=wayland
-   #export QT_QPA_PLATFORM="wayland;xcb"
-   export QT_QPA_PLATFORMTHEME=qt5ct
-   export QT_AUTO_SCREEN_SCALE_FACTOR=1
-   #export  QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-   export SDL_VIDEODRIVER=wayland
-   #export SDL_VIDEODRIVER="wayland,x11"
-   export CLUTTER_BACKEND=wayland
-   export _JAVA_AWT_WM_NONREPARENTING=1
-   
-   # --- Wlroots Settings ---
-   export WLR_NO_HARDWARE_CURSORS=1
-   export WLR_SCENE_DISABLE_DIRECT_SCANOUT=1
-   export WLR_DRM_FORCE_LIBLIFTOFF=0
-   #export WLR_DRM_NO_ATOMIC=1
-   export WLR_DRM_NO_MODIFIERS=1
-   #export WLR_RENDERER_ALLOW_SOFTWARE=1
-   #export WLR_RENDERER=vulkan
-   export WLR_RENDERER=gles2
-   
-   # --- Misc ---
-   export TERM=foot-client
-   export FILES=thunar
-   export BROWSER=firefox
-   export MOZ_ENABLE_WAYLAND=1
    
    # Starting dbus-session might require hard path.
    dbus-run-session dwl -s /home/yourusername/.local/bin/dwl-startup.sh
    ```
    Note:  
-   - Customization: Comment out or delete sections if you're unsure about their necessity for your setup.
    - Session Settings: Ensure that the session settings are included.
    - DBus Session: If you don't have an active DBus session, include the dbus-run-session command to start one along with dwl.
 
