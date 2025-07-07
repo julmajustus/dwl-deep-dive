@@ -55,7 +55,7 @@ Whether you’re a beginner wanting to learn about minimal window managers or an
   - [Patch Conflicts](#patch-conflicts)
   - [Applications Not Launching](#applications-not-launching)
   - [dwl Starts from Terminal but Not from TTY or Display Manager](#dwl-starts-from-terminal-but-not-from-tty-or-display-manager)
-  - [Screensharing does Not Work](#screensharing-does-not-work)
+  - [Screen sharing does Not Work](#screen-sharing-does-not-work)
 
 
 # Introduction
