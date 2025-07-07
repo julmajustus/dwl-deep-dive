@@ -40,13 +40,22 @@ Whether you’re a beginner wanting to learn about minimal window managers or an
     - [Merging Patches](#merging-patches)
 - [Configuration](#configuration)
   - [General Configuration](#general-configuration)
-  - [Setup and Install essential programs](#setup-and-install-essential-programs)
+  - [Install Essential Programs and Create Startup Script](#install-essential-programs-and-create-startup-script)
+    - [Startup Script](#startup-script)  
+    - [Configure Waybar](#configure-waybar)  
 - [Usage](#usage)
   - [Starting dwl with Login manager](#starting-dwl-with-login-manager)
   - [Starting dwl from TTY](#starting-dwl-with-login-manager)
     - [Automate dwl startup from specific TTY](#automate-dwl-startup-from-specific-tty)
 - [What next?](#what-next?)
 - [Troubleshooting](#troubleshooting)
+  - [Build Errors](#build-errors)
+  - [Configuration Not Applying](#configuration-not-applying)
+  - [Display Issues](#display-issues)
+  - [Patch Conflicts](#patch-conflicts)
+  - [Applications Not Launching](#applications-not-launching)
+  - [dwl Starts from Terminal but Not from TTY or Display Manager](#dwl-starts-from-terminal-but-not-from-tty-or-display-manager)
+  - [Screensharing does Not Work](#screensharing-does-not-work)
 
 
 # Introduction
@@ -746,7 +755,7 @@ One of the joys of suckless software is the ability to patch the source to add n
 
    Restart your session or run dwl in a nested environment to see your changes in action.
 
-### Setup and install essential programs
+## Install Essential Programs and Create Startup Script
 
    Even after configuring dwl, a few additional programs are needed to create a fully usable environment.   
    For this guide we will install:
@@ -759,7 +768,10 @@ One of the joys of suckless software is the ability to patch the source to add n
    ```bash
    sudo apt install -y waybar swaybg mako-notifier
    ```
-   Create your startup script (e.g., ~/.local/bin/dwl-startup.sh):
+
+### Startup Script
+
+   Create your startup script (for example, ~/.local/bin/dwl-startup.sh):
    ```bash
    #!/bin/bash
  
@@ -777,18 +789,72 @@ One of the joys of suckless software is the ability to patch the source to add n
    waybar &
    foot --server &
    ```
+   
+   Ensure the D-Bus environment is updated (keep this at the bottom of the script):
+   - If you use systemd:  
+   ```bash
+    exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=wlroots
+   ```
+   - Otherwise:  
+   ```bash
+    exec dbus-update-environment WAYLAND_DISPLAY
+   ```
+   
+   **If you plan to launch dwl from a TTY, you may need to start additional services in your startup script.**  
+
+   Display/login managers normally launch various daemons and agents to support your desktop; when starting dwl from a TTY, you’re responsible for these yourself.  
+
+   Some commonly needed services include xdg-portals, polkit agents, idle inhibitors, sound servers, etc. You can see which applications your system auto-starts by inspecting: `/etc/xdg/autostart` or `~/.config/autostart`. 
+
+   Below are example snippets for a few of these daemons (paths may vary on your system):    
+
+   - **xdg-desktop-portals**:
+      ```bash
+      for portal in xdg-desktop-portal-gtk xdg-desktop-portal-wlr xdg-desktop-portal; do
+         pkill -e "$portal"
+      done
+
+      # Start xdg-desktop-portal-wlr and xdg-desktop-portal-gtk
+      /usr/libexec/xdg-desktop-portal-wlr &
+      /usr/libexec/xdg-desktop-portal-gtk &
+
+      sleep 1
+
+      # Start main xdg-desktop-portal
+      /usr/libexec/xdg-desktop-portal &
+      ```
+   - **polkit**:   
+      Note: `Check what polkit your system is using or install preferred one.`
+      ```bash
+      # Polkit agent (check if available)
+      if [ -x "/usr/libexec/polkit-gnome-authentication-agent-1" ]; then
+          /usr/libexec/polkit-gnome-authentication-agent-1 &
+      elif [ -x "/usr/lib/xfce-polkit/xfce-polkit" ]; then
+          /usr/lib/xfce-polkit/xfce-polkit &
+      fi
+      ```
+
    Make the script executable:
    ```bash
    chmod +x ~/.local/bin/dwl-startup.sh
    ```
-   Test the startup script with dwl:
+   Test it by compiling and launching dwl with your startup script:  
    ```bash
+   # Compile dwl:
    make
+
+   # Launch dwl with startup script:
    ./dwl -s ~/.local/bin/dwl-startup.sh
    ```
    ![dwlwithbar](media/dwlwithbar.png)
-   Now we should have a running dwl setup with status bar, desktop wallpaper and notification manager.
-   For the scope of this guide, we're not going to dive into configuring the support programs, but let's enable dwl related options from out Waybar statusbar.
+   
+   Now you should have dwl running with your wallpaper, status bar, and notification manager.  
+   For reference, see my [startup script on GitHub](https://raw.githubusercontent.com/julmajustus/dots/refs/heads/main/.config/dwl/startup).
+   
+
+### Configure Waybar
+
+   For the scope of this guide, we're not going to dive into configuring the support programs, but let's enable dwl related options from our Waybar statusbar.
    
    To integrate Waybar with dwl, copy the default Waybar configuration to your local config directory:
    ```bash
@@ -898,7 +964,8 @@ One of the joys of suckless software is the ability to patch the source to add n
 
    Some login managers might not support Wayland, and if you prefer a minimal setup, dwl can be easily started from a TTY.  
 
-   Note: `Login managers often handle essential components automatically (such as starting a DBus session and setting required environment variables). When launching dwl directly, you might need to manually configure these components.`  
+   Note: `Login managers often handle essential components automatically (such as starting a DBus session, setting required environment variables and starting applications and system components). When launching dwl directly from TTY, you might need to manually configure these components and start the applications manually.`  
+   See [Startup Script](#startup-script)  
    
    Install dwl system-wide:
    ```bash
@@ -927,7 +994,9 @@ One of the joys of suckless software is the ability to patch the source to add n
    XDG_RUNTIME_DIR=/run/user/1000
    DBUS_SESSION_BUS_ADDRESS=unix:path=somepathtodbussession
    ```
-   If dwl does not start or some of the needed variables are missing create a script to add needed variables:
+   If dwl does not start or some of the needed variables are missing, create a script to add needed variables:
+
+   Note: `If you don't want to create separate script for setting up environment variables you can include them to the dwl-startup script.`
    ```bash
    vim ~/.local/bin/start-dwl-tty.sh
    ```
@@ -1024,30 +1093,62 @@ After installation and configuration, here are some suggestions:
 
 Here are some common issues you might encounter and tips on how to resolve them:
 
-1. **Build Errors:**
+### Build Errors
    - Ensure all dependencies are installed.
    - If compiling fails after patching, check that you also updated your config.h.
 
-2. **Configuration Not Applying:**
+### Configuration Not Applying
    - Verify that you edited the correct configuration file.
    - Re-run `make clean install` after any change.
 
-3. **Display Issues:**
+### Display Issues
    - Make sure your system supports Wayland.
    - Check logs for error messages (running dwl from a terminal can help).
 
-4. **Patch Conflicts:**
-   - If a patch fails to apply cleanly, review the diff and resolve conflicts manually.
+### Patch Conflicts
+   - If a patch fails to apply cleanly, review the diff and resolve conflicts manually.  
+   See [Patching](#patching)  
    - Consult the dwl community or documentation for guidance.
 
-5. **Applications Not Launching:**
+### Applications Not Launching
    - Verify that dwl was compiled with XWayland support (if needed). (Defined at config.mk).
    - Run the application from a terminal to check for errors.
-   - Ensure a D-Bus session is active.
+   - Ensure a D-Bus session is active.  
+   See [Startup Script](#startup-script) for more details.  
 
-6. **dwl Starts from Terminal but Not from TTY or Display Manager:**
+### dwl Starts from Terminal but Not from TTY or Display Manager
    - Additional configuration of environment variables may be required.   
-   See [dwl Running Instructions](https://codeberg.org/dwl/dwl#running-dwl) for more details.
+   See [dwl Running Instructions](https://codeberg.org/dwl/dwl#running-dwl) for more details.  
+   See [Starting dwl from TTY](#starting-dwl-from-tty) for more details.  
+
+### Screen sharing does Not Work
+   - Ensure you’ve installed PipeWire and the required portal package for screen sharing.   
+   See [xdg-desktop-portal-wlr](https://github.com/emersion/xdg-desktop-portal-wlr) for more details.  
+   - Make sure the necessary xdg-portal services are running.
+   - **If you’re launching dwl from a TTY, verify that the required environment variables are set.**   
+
+   In your ~/.local/bin/start-dwl-tty.sh:  
+   ```bash
+   #!/bin/sh
+
+   # --- Session settings ---
+   export XDG_CURRENT_DESKTOP=wlroots
+   export XDG_SESSION_TYPE=wayland
+   export XDG_SESSION_DESKTOP=wlroots
+   
+   # Starting dbus-session might require hard path.
+   dbus-run-session dwl -s /home/yourusername/.local/bin/dwl-startup.sh
+   ```
+   See [Starting dwl from TTY](#starting-dwl-from-tty) for more details.  
+
+   - **If you use systemd or a display manager, update the D-Bus environment in your startup script by adding:**  
+   ```bash
+   exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=wlroots
+   ```
+   See [Startup Script](#startup-script) for more details.  
+
+
+
 
 ---
 
