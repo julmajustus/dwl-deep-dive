@@ -540,7 +540,7 @@ One of the joys of suckless software is the ability to patch the source to add n
    ```
    If that fails, resort to the patch command:
    ```bash
-   patch -p1 < patches/ipcpertag.patch
+   patch -p1 < patches/ipc.patch
    patching file Makefile
    Hunk #1 succeeded at 17 with fuzz 1.
    patching file config.def.h
