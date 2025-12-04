@@ -242,7 +242,7 @@ To build dwl v0.7, you need wlroots version 0.18. However, Ubuntu 24.10 only pro
    libxcb-xinput-dev \
    libxcb-res0-dev libxcb-render-util0-dev \
    libxcb-dri3-dev libdisplay-info-dev \
-   libliftoff-dev libxcb-ewmh-dev libxcb-shm0-dev\
+   libliftoff-dev libxcb-ewmh-dev libxcb-shm0-dev \
    libcap-dev  libsystemd-dev  libvulkan-dev  \
    libwlroots12t64  libx11-xcb-dev  libxcb-image0-dev \
    libegl1-mesa-dev libgles2-mesa-dev wayland-protocols \
