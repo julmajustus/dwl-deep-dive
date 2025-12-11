@@ -775,7 +775,7 @@ One of the joys of suckless software is the ability to patch the source to add n
    ```bash
    #!/bin/bash
  
-   # Kill already running dublicate process
+   # Kill already running duplicate process
    _ps="waybar mako swaybg"
    for _prs in $_ps; do
        if [ "$(pidof "${_prs}")" ]; then
